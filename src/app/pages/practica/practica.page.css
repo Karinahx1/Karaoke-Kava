@@ -1,0 +1,136 @@
+.contenedor-practica {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 24px;
+  font-family: Arial, sans-serif;
+}
+
+.encabezado {
+  margin-bottom: 24px;
+}
+
+.encabezado h1 {
+  margin-bottom: 8px;
+  font-size: 2rem;
+}
+
+.subtitulo {
+  color: #555;
+}
+
+.panel {
+  background: #ffffff;
+  border: 1px solid #ddd;
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.selector-cancion {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid #bbb;
+  font-size: 1rem;
+}
+
+.video-wrapper {
+  position: relative;
+  width: 100%;
+  padding-top: 56.25%;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #000;
+}
+
+.video-wrapper iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.letra {
+  white-space: pre-wrap;
+  line-height: 1.7;
+  color: #333;
+  background: #fafafa;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.botones-grabacion {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.btn {
+  border: none;
+  border-radius: 10px;
+  padding: 12px 18px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-iniciar {
+  background: #2563eb;
+  color: white;
+}
+
+.btn-detener {
+  background: #dc2626;
+  color: white;
+}
+
+.estado {
+  margin: 10px 0;
+  line-height: 1.5;
+}
+
+.ok {
+  color: #15803d;
+  font-weight: bold;
+}
+
+.panel-resultado {
+  border: 2px solid #2563eb;
+}
+
+.tarjeta-puntaje {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #eff6ff;
+  border: 2px solid #2563eb;
+  border-radius: 16px;
+  padding: 20px;
+  min-width: 160px;
+  margin-bottom: 20px;
+}
+
+.puntaje-label {
+  font-size: 0.95rem;
+  color: #1d4ed8;
+  margin-bottom: 8px;
+}
+
+.puntaje-valor {
+  font-size: 2.2rem;
+  font-weight: bold;
+  color: #1e3a8a;
+}
+
+.detalle-resultado p {
+  margin: 10px 0;
+  line-height: 1.6;
+}

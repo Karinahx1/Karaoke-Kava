@@ -1,0 +1,110 @@
+<div class="contenedor-practica">
+
+  <header class="encabezado">
+    <h1>Modo práctica 🎤</h1>
+    <p class="subtitulo">
+      Elige una canción, canta y recibe tu resultado.
+    </p>
+  </header>
+
+  <section class="panel panel-cancion">
+    <h2>Selecciona una canción</h2>
+
+    <select
+      class="selector-cancion"
+      (change)="seleccionarCancion(+$any($event.target).value)"
+    >
+      <option
+        *ngFor="let cancion of canciones()"
+        [value]="cancion.id"
+        [selected]="cancionSeleccionada()?.id === cancion.id"
+      >
+        {{ cancion.titulo }} - {{ cancion.artista }}
+      </option>
+    </select>
+  </section>
+
+  <section class="panel panel-info" *ngIf="cancionSeleccionada() as cancion">
+    <h2>{{ cancion.titulo }}</h2>
+    <p><strong>Artista:</strong> {{ cancion.artista }}</p>
+    <p><strong>Duración:</strong> {{ cancion.duracion }} segundos</p>
+  </section>
+
+  <section class="panel panel-video" *ngIf="videoUrl()">
+    <h2>Video karaoke</h2>
+
+    <div class="video-wrapper">
+      <iframe
+        [src]="videoUrl()"
+        title="Video karaoke"
+        frameborder="0"
+        allowfullscreen>
+      </iframe>
+    </div>
+  </section>
+
+  <section class="panel panel-letra" *ngIf="cancionSeleccionada()?.letra">
+    <h2>Letra</h2>
+    <div class="letra">
+      {{ cancionSeleccionada()?.letra }}
+    </div>
+  </section>
+
+  <section class="panel panel-grabacion">
+    <h2>Grabación</h2>
+
+    <div class="botones-grabacion">
+      <button class="btn btn-iniciar" (click)="iniciarGrabacion()" [disabled]="grabando()">
+        🎙️ Iniciar grabación
+      </button>
+
+      <button class="btn btn-detener" (click)="detenerGrabacion()" [disabled]="!grabando()">
+        ⏹️ Detener grabación
+      </button>
+    </div>
+
+    <p *ngIf="transcripcionVoz()" class="estado">
+      <strong>Transcripción detectada:</strong> {{ transcripcionVoz() }}
+    </p>
+
+    <p *ngIf="audioBlob()" class="estado ok">
+      ✅ Audio grabado correctamente
+    </p>
+
+    <p *ngIf="audioUrl()" class="estado ok">
+      ✅ Audio subido correctamente
+    </p>
+
+    <p *ngIf="audioUrl()" class="estado">
+      <strong>URL del audio:</strong> {{ audioUrl() }}
+    </p>
+
+    <p *ngIf="practicaCreada()" class="estado ok">
+      ✅ Práctica guardada correctamente con ID: {{ practicaCreada()?.id }}
+    </p>
+  </section>
+
+  <section class="panel panel-resultado" *ngIf="practicaEvaluada()">
+    <h2>Resultado de la práctica</h2>
+
+    <div class="tarjeta-puntaje">
+      <span class="puntaje-label">Puntaje</span>
+      <span class="puntaje-valor">{{ practicaEvaluada()?.puntaje }}</span>
+    </div>
+
+    <div class="detalle-resultado">
+      <p>
+        <strong>Feedback:</strong> {{ practicaEvaluada()?.feedback }}
+      </p>
+
+      <p>
+        <strong>Transcripción:</strong> {{ practicaEvaluada()?.transcripcion }}
+      </p>
+
+      <p *ngIf="duracionAudio() > 0">
+        <strong>Duración del audio:</strong> {{ duracionAudio() }} segundos
+      </p>
+    </div>
+  </section>
+
+</div>
