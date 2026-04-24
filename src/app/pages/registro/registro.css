@@ -1,0 +1,81 @@
+.auth-container {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background:
+    radial-gradient(circle at top left, rgba(124, 58, 237, 0.35), transparent 35%),
+    linear-gradient(135deg, #020617, #0f172a);
+  padding: 24px;
+  font-family: Arial, sans-serif;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 460px;
+  background: rgba(15, 23, 42, 0.9);
+  color: white;
+  border-radius: 22px;
+  padding: 32px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+}
+
+h1 {
+  margin: 10px 0;
+  font-size: 2rem;
+}
+
+p {
+  color: #cbd5e1;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+label {
+  font-weight: bold;
+}
+
+input {
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid #475569;
+  background: #020617;
+  color: white;
+}
+
+.btn-principal {
+  margin-top: 12px;
+  padding: 14px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.btn-volver {
+  background: transparent;
+  color: #c4b5fd;
+  border: none;
+  cursor: pointer;
+}
+
+.cambio {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.cambio button {
+  background: transparent;
+  border: none;
+  color: #60a5fa;
+  font-weight: bold;
+  cursor: pointer;
+}

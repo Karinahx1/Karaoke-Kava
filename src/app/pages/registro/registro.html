@@ -1,0 +1,70 @@
+<div class="auth-container">
+  <section class="auth-card">
+    <button class="btn-volver" (click)="volverInicio()">← Volver</button>
+
+    <h1>Registrarse</h1>
+    <p>Crea tu cuenta para comenzar a practicar.</p>
+
+    <form (ngSubmit)="registrarse()">
+      <label>Nombre</label>
+      <input
+        type="text"
+        name="nombre"
+        [(ngModel)]="nombre"
+        placeholder="Tu nombre"
+        required
+      />
+
+      <label>Apellido</label>
+      <input
+        type="text"
+        name="apellido"
+        [(ngModel)]="apellido"
+        placeholder="Tu apellido"
+        required
+      />
+      <label>Número de documento</label>
+<input
+  type="text"
+  name="numDocumento"
+  [(ngModel)]="numDocumento"
+  placeholder="Tu número de documento"
+  required
+/>
+
+<label>Género</label>
+<select [(ngModel)]="idGenero">
+  <option [value]="1">Femenino</option>
+  <option [value]="2">Masculino</option>
+  <option [value]="3">Otro</option>
+</select>
+
+      <label>Email</label>
+      <input
+        type="email"
+        name="email"
+        [(ngModel)]="email"
+        placeholder="tuemail@correo.com"
+        required
+      />
+
+      <label>Contraseña</label>
+      <input
+        type="password"
+        name="password"
+        [(ngModel)]="password"
+        placeholder="Crea una contraseña"
+        required
+      />
+
+      <button class="btn-principal" type="submit">
+        Crear cuenta
+      </button>
+    </form>
+
+    <p class="cambio">
+      ¿Ya tienes cuenta?
+      <button (click)="irLogin()">Inicia sesión</button>
+    </p>
+  </section>
+</div>

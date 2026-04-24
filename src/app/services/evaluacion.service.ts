@@ -22,10 +22,13 @@ export class EvaluacionService {
    * - duracionAudio: duración total de la interpretación
    */
   async evaluarPractica(data: {
-    idPractica: number;
-    transcripcion: string;
-    duracionAudio: number;
-  }) {
+  idPractica: number;
+  transcripcion: string;
+  duracionAudio: number;
+  rmsPromedio: number;
+  porcentajeSilencio: number;
+  porcentajeActividad: number;
+}) {
     const response = await fetch(this.url, {
       method: 'POST',
       headers: {

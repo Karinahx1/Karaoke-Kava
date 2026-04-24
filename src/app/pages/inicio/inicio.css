@@ -1,0 +1,126 @@
+:host {
+  display: block;
+  min-height: 100vh;
+}
+
+/* Fondo principal de la pantalla */
+.inicio-container {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  padding: 24px;
+
+  background:
+    radial-gradient(circle at top left, rgba(124, 58, 237, 0.35), transparent 35%),
+    radial-gradient(circle at bottom right, rgba(37, 99, 235, 0.35), transparent 35%),
+    linear-gradient(135deg, #020617, #0f172a);
+
+  font-family: Arial, sans-serif;
+}
+
+/* Tarjeta central */
+.inicio-card {
+  width: 100%;
+  max-width: 520px;
+
+  padding: 42px 34px;
+  border-radius: 24px;
+
+  text-align: center;
+
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+
+  color: white;
+}
+
+/* Icono superior */
+.icono {
+  font-size: 58px;
+  margin-bottom: 12px;
+}
+
+/* Título */
+.inicio-card h1 {
+  margin: 0 0 14px;
+
+  font-size: 3rem;
+  font-weight: 900;
+  letter-spacing: -1px;
+
+  background: linear-gradient(90deg, #c4b5fd, #60a5fa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Texto descriptivo */
+.descripcion {
+  margin: 0 auto 30px;
+
+  max-width: 420px;
+
+  color: #cbd5e1;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+/* Contenedor de botones */
+.acciones {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* Estilo base de botones */
+.btn {
+  min-width: 160px;
+
+  padding: 14px 22px;
+
+  border: none;
+  border-radius: 14px;
+
+  font-size: 1rem;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+}
+
+/* Botón de login */
+.btn-login {
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  color: white;
+  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.35);
+}
+
+/* Botón de registro */
+.btn-registro {
+  background: rgba(255, 255, 255, 0.08);
+  color: #e0e7ff;
+  border: 1px solid rgba(196, 181, 253, 0.45);
+}
+
+/* Responsive */
+@media (max-width: 560px) {
+  .inicio-card {
+    padding: 34px 22px;
+  }
+
+  .inicio-card h1 {
+    font-size: 2.3rem;
+  }
+
+  .btn {
+    width: 100%;
+  }
+}

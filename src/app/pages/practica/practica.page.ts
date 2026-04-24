@@ -1,15 +1,13 @@
-import { Component, signal } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+
 import { StorageService } from '../../services/storage.service';
 import { PracticaService } from '../../services/practica.service';
 import { EvaluacionService } from '../../services/evaluacion.service';
-import { OnInit } from '@angular/core';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { CancionService } from '../../services/cancion.service';
 
-
-// Declaramos la API de reconocimiento de voz del navegador.
-// Esto permite usar webkitSpeechRecognition en TypeScript.
+// API de reconocimiento de voz del navegador
 declare var webkitSpeechRecognition: any;
 
 @Component({
@@ -19,7 +17,7 @@ declare var webkitSpeechRecognition: any;
   templateUrl: './practica.page.html',
   styleUrl: './practica.page.css'
 })
-export class PracticaPage implements OnInit{
+export class PracticaPage implements OnInit {
 
   /**
    * Tiempo en el que comienza la grabación.
@@ -29,61 +27,82 @@ export class PracticaPage implements OnInit{
 
   /**
    * Duración total del audio en segundos.
-   * Esta métrica la enviaremos a la Edge Function
-   * para ayudar a evaluar qué tan completa fue la interpretación.
    */
   duracionAudio = signal(0);
 
   /**
-   * Grabador de audio del navegador.
+   * Grabador del navegador
    */
   mediaRecorder!: MediaRecorder;
 
   /**
-   * Reconocimiento de voz del navegador.
-   * Se usa para obtener una transcripción real sin pagar API.
+   * Reconocimiento de voz del navegador
    */
   recognition: any;
 
   /**
-   * Fragmentos del audio que se van capturando mientras se graba.
+   * Fragmentos del audio grabado
    */
   audioChunks: Blob[] = [];
 
   /**
-   * Estado reactivo del componente.
+   * Estado reactivo principal
    */
   audioBlob = signal<Blob | null>(null);
   grabando = signal(false);
   audioUrl = signal<string | null>(null);
   practicaCreada = signal<any | null>(null);
   practicaEvaluada = signal<any | null>(null);
+  transcripcionVoz = signal<string>('');
   /**
- * Lista de canciones disponibles
+ * Indica si la práctica ya fue iniciada.
+ * La usamos para cargar el video con autoplay.
  */
+  practicaIniciada = signal(false);
+
+  /**
+   * Lista de canciones disponibles
+   */
   canciones = signal<any[]>([]);
 
-/**
- * Canción seleccionada actualmente
- */
+  /**
+   * Canción seleccionada actualmente
+   */
   cancionSeleccionada = signal<any | null>(null);
 
-/**
- * URL segura para mostrar el video en un iframe
- */
+  /**
+   * URL segura para mostrar el video en iframe
+   */
   videoUrl = signal<SafeResourceUrl | null>(null);
 
   /**
-   * Aquí guardamos la transcripción obtenida por reconocimiento de voz.
+   * Herramientas de análisis de audio en tiempo real.
+   * Nos sirven para medir si realmente hubo voz/actividad.
    */
-  transcripcionVoz = signal<string>('');
+  audioContext!: AudioContext;
+  analyser!: AnalyserNode;
+  sourceNode!: MediaStreamAudioSourceNode;
+  datosTiempo!: Float32Array;
+  analisisActivo = false;
+  animationFrameId = 0;
 
   /**
-   * IDs temporales para pruebas.
-   * Más adelante estos valores deberán venir:
-   * - del usuario autenticado
-   * - de la canción seleccionada
-   * - de los estados reales consultados en base de datos
+   * Métricas acumuladas durante la grabación.
+   */
+  muestrasAnalizadas = 0;
+  muestrasConActividad = 0;
+  muestrasEnSilencio = 0;
+  sumaRms = 0;
+
+  /**
+   * Resultados finales del análisis de audio.
+   */
+  rmsPromedio = signal(0);
+  porcentajeSilencio = signal(0);
+  porcentajeActividad = signal(0);
+
+  /**
+   * IDs temporales para pruebas
    */
   idUsuarioPrueba = 1;
   idCancionPrueba = 1;
@@ -91,117 +110,98 @@ export class PracticaPage implements OnInit{
   idEstadoPracticaFinalizada = 5;
 
   constructor(
-  private storageService: StorageService,
-  private practicaService: PracticaService,
-  private evaluacionService: EvaluacionService,
-  private cancionService: CancionService,
-  private sanitizer: DomSanitizer
+    private storageService: StorageService,
+    private practicaService: PracticaService,
+    private evaluacionService: EvaluacionService,
+    private cancionService: CancionService,
+    private sanitizer: DomSanitizer
   ) {}
 
-  /**
- * Cuando la pantalla carga, consultamos todas las canciones
- * y seleccionamos la primera por defecto.
- */
-async ngOnInit() {
-  try {
-    const listaCanciones = await this.cancionService.obtenerCanciones();
-    this.canciones.set(listaCanciones ?? []);
+  async ngOnInit() {
+    try {
+      const listaCanciones = await this.cancionService.obtenerCanciones();
+      this.canciones.set(listaCanciones ?? []);
 
-    // Si existe al menos una canción, seleccionamos la primera automáticamente
-    if (this.canciones().length > 0) {
-      await this.seleccionarCancion(this.canciones()[0].id);
+      if (this.canciones().length > 0) {
+        await this.seleccionarCancion(this.canciones()[0].id);
+      }
+    } catch (error) {
+      console.error('Error al cargar canciones:', error);
     }
-
-  } catch (error) {
-    console.error('Error al cargar canciones:', error);
   }
-}
-
-/**
- * Carga una canción específica y prepara su video.
- */
-async seleccionarCancion(idCancion: number) {
-  try {
-    const cancion = await this.cancionService.obtenerCancionPorId(idCancion);
-
-    this.cancionSeleccionada.set(cancion);
-    this.idCancionPrueba = cancion.id;
-
-    /**
-     * En tu base el link de YouTube está en url_audio.
-     * Lo convertimos a formato embed para poder mostrarlo en iframe.
-     */
-    const urlEmbed = this.convertirYoutubeAEmbed(cancion.url_audio);
-
-    if (urlEmbed) {
-      this.videoUrl.set(
-        this.sanitizer.bypassSecurityTrustResourceUrl(urlEmbed)
-      );
-    } else {
-      this.videoUrl.set(null);
-    }
-
-    console.log('Canción seleccionada:', cancion);
-    console.log('URL embed del video:', urlEmbed);
-
-  } catch (error) {
-    console.error('Error al seleccionar canción:', error);
-  }
-}
 
   /**
- * Convierte diferentes formatos de URL de YouTube
- * a formato embed para poder mostrarlos dentro de un iframe.
- *
- * Ejemplos:
- * - https://youtu.be/SrxAV2du67M
- * - https://www.youtube.com/watch?v=SrxAV2du67M
- * - https://www.youtube.com/embed/SrxAV2du67M
- */
-convertirYoutubeAEmbed(url: string): string | null {
+   * Convierte enlaces de YouTube a formato embed.
+   */
+  convertirYoutubeAEmbed(url: string): string | null {
   if (!url) return null;
+
+  const autoplay = this.practicaIniciada()
+    ? '?autoplay=1&rel=0'
+    : '?rel=0';
 
   // Caso 1: ya viene en formato embed
   if (url.includes('youtube.com/embed/')) {
-    return url;
+    const urlBase = url.split('?')[0];
+    return `${urlBase}${autoplay}`;
   }
 
   // Caso 2: formato corto youtu.be
   if (url.includes('youtu.be/')) {
     const partes = url.split('youtu.be/');
     const idVideo = partes[1]?.split('?')[0];
-    return idVideo ? `https://www.youtube.com/embed/${idVideo}` : null;
+    return idVideo ? `https://www.youtube.com/embed/${idVideo}${autoplay}` : null;
   }
 
-  // Caso 3: formato clásico watch?v=
+  // Caso 3: formato normal watch?v=
   if (url.includes('watch?v=')) {
     const partes = url.split('watch?v=');
     const idVideo = partes[1]?.split('&')[0];
-    return idVideo ? `https://www.youtube.com/embed/${idVideo}` : null;
+    return idVideo ? `https://www.youtube.com/embed/${idVideo}${autoplay}` : null;
   }
 
-  // Si no reconocemos el formato, devolvemos null
   return null;
- }
+}
+
   /**
-   * Inicia el reconocimiento de voz del navegador.
-   *
-   * Esto NO reemplaza la grabación del audio.
-   * Solamente intenta convertir la voz detectada en texto.
+   * Carga una canción y prepara el video.
+   */
+  async seleccionarCancion(idCancion: number) {
+    this.practicaIniciada.set(false);
+    try {
+      const cancion = await this.cancionService.obtenerCancionPorId(idCancion);
+
+      this.cancionSeleccionada.set(cancion);
+      this.idCancionPrueba = cancion.id;
+
+      const urlEmbed = this.convertirYoutubeAEmbed(cancion.url_audio);
+
+      if (urlEmbed) {
+        this.videoUrl.set(
+          this.sanitizer.bypassSecurityTrustResourceUrl(urlEmbed)
+        );
+      } else {
+        this.videoUrl.set(null);
+      }
+
+      console.log('Canción seleccionada:', cancion);
+      console.log('URL embed del video:', urlEmbed);
+
+    } catch (error) {
+      console.error('Error al seleccionar canción:', error);
+    }
+  }
+
+  /**
+   * Inicia reconocimiento de voz.
    */
   iniciarReconocimiento() {
     this.recognition = new webkitSpeechRecognition();
 
-    // Idioma de reconocimiento
     this.recognition.lang = 'es-ES';
-
-    // Queremos que siga escuchando mientras el usuario canta
     this.recognition.continuous = true;
-
-    // No usamos resultados parciales "inestables"
     this.recognition.interimResults = false;
 
-    // Cada vez que el navegador reconoce voz, la acumulamos
     this.recognition.onresult = (event: any) => {
       let textoAcumulado = this.transcripcionVoz();
 
@@ -213,7 +213,6 @@ convertirYoutubeAEmbed(url: string): string | null {
       console.log('Transcripción parcial/real:', this.transcripcionVoz());
     };
 
-    // Si falla el reconocimiento, mostramos aviso en consola
     this.recognition.onerror = (event: any) => {
       console.warn('Error en reconocimiento de voz:', event.error);
     };
@@ -222,7 +221,7 @@ convertirYoutubeAEmbed(url: string): string | null {
   }
 
   /**
-   * Detiene el reconocimiento de voz.
+   * Detiene reconocimiento de voz.
    */
   detenerReconocimiento() {
     if (this.recognition) {
@@ -231,7 +230,89 @@ convertirYoutubeAEmbed(url: string): string | null {
   }
 
   /**
-   * Inicia la grabación del micrófono y también el reconocimiento de voz.
+   * Inicia el análisis básico del audio.
+   * Aquí medimos:
+   * - RMS promedio
+   * - actividad
+   * - silencio
+   */
+  iniciarAnalisisAudio(stream: MediaStream) {
+    this.audioContext = new AudioContext();
+    this.analyser = this.audioContext.createAnalyser();
+    this.sourceNode = this.audioContext.createMediaStreamSource(stream);
+
+    this.sourceNode.connect(this.analyser);
+
+    this.analyser.fftSize = 2048;
+    this.datosTiempo = new Float32Array(this.analyser.fftSize);
+
+    // Reiniciar métricas
+    this.muestrasAnalizadas = 0;
+    this.muestrasConActividad = 0;
+    this.muestrasEnSilencio = 0;
+    this.sumaRms = 0;
+
+    this.rmsPromedio.set(0);
+    this.porcentajeSilencio.set(0);
+    this.porcentajeActividad.set(0);
+
+    this.analisisActivo = true;
+
+    const analizar = () => {
+      if (!this.analisisActivo) return;
+
+      this.analyser.getFloatTimeDomainData(this.datosTiempo as any);
+
+      let sumaCuadrados = 0;
+      for (let i = 0; i < this.datosTiempo.length; i++) {
+        sumaCuadrados += this.datosTiempo[i] * this.datosTiempo[i];
+      }
+
+      const rms = Math.sqrt(sumaCuadrados / this.datosTiempo.length);
+
+      this.muestrasAnalizadas++;
+      this.sumaRms += rms;
+
+      if (rms < 0.02) {
+        this.muestrasEnSilencio++;
+      } else {
+        this.muestrasConActividad++;
+      }
+
+      this.animationFrameId = requestAnimationFrame(analizar);
+    };
+
+    analizar();
+  }
+
+  /**
+   * Detiene el análisis de audio y calcula resultados.
+   */
+  detenerAnalisisAudio() {
+    this.analisisActivo = false;
+    cancelAnimationFrame(this.animationFrameId);
+
+    if (this.muestrasAnalizadas > 0) {
+      const rms = this.sumaRms / this.muestrasAnalizadas;
+      const silencio = (this.muestrasEnSilencio / this.muestrasAnalizadas) * 100;
+      const actividad = (this.muestrasConActividad / this.muestrasAnalizadas) * 100;
+
+      this.rmsPromedio.set(Number(rms.toFixed(4)));
+      this.porcentajeSilencio.set(Number(silencio.toFixed(2)));
+      this.porcentajeActividad.set(Number(actividad.toFixed(2)));
+    }
+
+    if (this.audioContext) {
+      this.audioContext.close();
+    }
+
+    console.log('RMS promedio:', this.rmsPromedio());
+    console.log('Porcentaje de silencio:', this.porcentajeSilencio());
+    console.log('Porcentaje de actividad:', this.porcentajeActividad());
+  }
+
+  /**
+   * Inicia la grabación del micrófono y la transcripción.
    */
   async iniciarGrabacion() {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -239,7 +320,7 @@ convertirYoutubeAEmbed(url: string): string | null {
     this.mediaRecorder = new MediaRecorder(stream);
     this.audioChunks = [];
 
-    // Reiniciamos estados para una nueva práctica
+    // Reiniciar estados de una nueva práctica
     this.transcripcionVoz.set('');
     this.duracionAudio.set(0);
     this.audioBlob.set(null);
@@ -247,26 +328,21 @@ convertirYoutubeAEmbed(url: string): string | null {
     this.practicaCreada.set(null);
     this.practicaEvaluada.set(null);
 
-    // Guardamos el tiempo exacto en que empezó la grabación
     this.tiempoInicioGrabacion = Date.now();
 
-    // Empezamos reconocimiento de voz
     this.iniciarReconocimiento();
+    this.iniciarAnalisisAudio(stream);
 
-    // Capturamos fragmentos del audio
     this.mediaRecorder.ondataavailable = (event) => {
       if (event.data.size > 0) {
         this.audioChunks.push(event.data);
       }
     };
 
-    // Cuando termina la grabación
     this.mediaRecorder.onstop = async () => {
-      // Construimos el audio final
       const blobFinal = new Blob(this.audioChunks, { type: 'audio/webm' });
       this.audioBlob.set(blobFinal);
 
-      // Calculamos duración del audio en segundos
       const tiempoFinGrabacion = Date.now();
       const duracionSegundos = Math.round(
         (tiempoFinGrabacion - this.tiempoInicioGrabacion) / 1000
@@ -277,7 +353,6 @@ convertirYoutubeAEmbed(url: string): string | null {
       console.log('Duración del audio:', this.duracionAudio());
       console.log('Transcripción capturada:', this.transcripcionVoz());
 
-      // Después de grabar, subimos el audio
       await this.subirAudioGrabado();
     };
 
@@ -286,14 +361,28 @@ convertirYoutubeAEmbed(url: string): string | null {
   }
 
   /**
-   * Detiene la grabación y el reconocimiento de voz.
+   * Detiene grabación, reconocimiento y análisis.
    */
   detenerGrabacion() {
     if (this.mediaRecorder && this.grabando()) {
       this.mediaRecorder.stop();
       this.grabando.set(false);
       this.detenerReconocimiento();
+      this.detenerAnalisisAudio();
     }
+    this.practicaIniciada.set(false);
+
+const cancion = this.cancionSeleccionada();
+
+if (cancion) {
+  const urlEmbed = this.convertirYoutubeAEmbed(cancion.url_audio);
+
+  if (urlEmbed) {
+    this.videoUrl.set(
+      this.sanitizer.bypassSecurityTrustResourceUrl(urlEmbed)
+    );
+  }
+}
   }
 
   /**
@@ -306,24 +395,18 @@ convertirYoutubeAEmbed(url: string): string | null {
         return;
       }
 
-      // Nombre único del archivo
       const fileName = `practica-${Date.now()}.webm`;
 
-      // Convertimos el Blob a File
       const file = new File([this.audioBlob()!], fileName, {
         type: 'audio/webm'
       });
 
-      // Ruta interna dentro del bucket
       const filePath = `audios/${fileName}`;
-
-      // Subimos el archivo
       const publicUrl = await this.storageService.subirAudio(file, filePath);
 
       this.audioUrl.set(publicUrl);
       console.log('Audio subido correctamente:', publicUrl);
 
-      // Luego creamos la práctica en BD
       await this.crearPractica();
 
     } catch (error) {
@@ -351,7 +434,6 @@ convertirYoutubeAEmbed(url: string): string | null {
       this.practicaCreada.set(practica);
       console.log('Práctica creada correctamente:', practica);
 
-      // Después de crearla, la evaluamos
       await this.evaluarPractica();
 
     } catch (error) {
@@ -360,12 +442,7 @@ convertirYoutubeAEmbed(url: string): string | null {
   }
 
   /**
-   * Llama a la Edge Function para evaluar la práctica.
-   *
-   * Enviamos:
-   * - id de la práctica
-   * - transcripción capturada por el navegador
-   * - duración del audio en segundos
+   * Envía la práctica al backend para evaluación.
    */
   async evaluarPractica() {
     try {
@@ -377,7 +454,10 @@ convertirYoutubeAEmbed(url: string): string | null {
       const resultadoEvaluacion = await this.evaluacionService.evaluarPractica({
         idPractica: this.practicaCreada()!.id,
         transcripcion: this.transcripcionVoz(),
-        duracionAudio: this.duracionAudio()
+        duracionAudio: this.duracionAudio(),
+        rmsPromedio: this.rmsPromedio(),
+        porcentajeSilencio: this.porcentajeSilencio(),
+        porcentajeActividad: this.porcentajeActividad()
       });
 
       const practicaActualizada =
@@ -398,4 +478,31 @@ convertirYoutubeAEmbed(url: string): string | null {
       console.error('Error al evaluar la práctica:', error);
     }
   }
+
+  /**
+ * Inicia la práctica completa:
+ * - activa autoplay del video
+ * - recarga la URL del video
+ * - inicia grabación, transcripción y análisis de audio
+ */
+async iniciarPracticaCompleta() {
+  if (!this.cancionSeleccionada()) {
+    console.warn('No hay canción seleccionada.');
+    return;
+  }
+
+  this.practicaIniciada.set(true);
+
+  const urlEmbed = this.convertirYoutubeAEmbed(
+    this.cancionSeleccionada().url_audio
+  );
+
+  if (urlEmbed) {
+    this.videoUrl.set(
+      this.sanitizer.bypassSecurityTrustResourceUrl(urlEmbed)
+    );
+  }
+
+  await this.iniciarGrabacion();
+}
 }

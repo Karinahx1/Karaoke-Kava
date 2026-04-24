@@ -38,30 +38,32 @@
         [src]="videoUrl()"
         title="Video karaoke"
         frameborder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
         allowfullscreen>
       </iframe>
     </div>
-  </section>
 
-  <section class="panel panel-letra" *ngIf="cancionSeleccionada()?.letra">
-    <h2>Letra</h2>
-    <div class="letra">
-      {{ cancionSeleccionada()?.letra }}
+    <div class="botones-grabacion">
+      <button
+        class="btn-principal"
+        (click)="iniciarPracticaCompleta()"
+        [disabled]="grabando()"
+      >
+        🎬 Iniciar práctica
+      </button>
+
+      <button
+        class="btn-detener"
+        (click)="detenerGrabacion()"
+        [disabled]="!grabando()"
+      >
+        ⏹️ Detener práctica
+      </button>
     </div>
   </section>
 
   <section class="panel panel-grabacion">
     <h2>Grabación</h2>
-
-    <div class="botones-grabacion">
-      <button class="btn btn-iniciar" (click)="iniciarGrabacion()" [disabled]="grabando()">
-        🎙️ Iniciar grabación
-      </button>
-
-      <button class="btn btn-detener" (click)="detenerGrabacion()" [disabled]="!grabando()">
-        ⏹️ Detener grabación
-      </button>
-    </div>
 
     <p *ngIf="transcripcionVoz()" class="estado">
       <strong>Transcripción detectada:</strong> {{ transcripcionVoz() }}
@@ -106,5 +108,14 @@
       </p>
     </div>
   </section>
+
+  <section class="panel panel-letra" *ngIf="cancionSeleccionada()?.letra">
+    <h2>Letra</h2>
+    <div class="letra">
+      {{ cancionSeleccionada()?.letra }}
+    </div>
+  </section>
+
+  
 
 </div>
