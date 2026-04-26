@@ -1,0 +1,229 @@
+<div class="admin-container">
+
+  <header class="admin-header">
+    <div>
+      <h1>Panel de administración</h1>
+      <p>Gestiona las canciones disponibles en Karaoke Kava.</p>
+    </div>
+
+    <button class="btn-logout" type="button" (click)="cerrarSesion()">
+      Cerrar sesión
+    </button>
+  </header>
+
+  <div class="tabs-admin">
+    <button
+      type="button"
+      [class.activo]="vistaActual() === 'crear'"
+      (click)="cambiarVista('crear')"
+    >
+      Agregar canción
+    </button>
+
+    <button
+      type="button"
+      [class.activo]="vistaActual() === 'listar'"
+      (click)="cambiarVista('listar')"
+    >
+      Ver canciones
+    </button>
+  </div>
+
+  <section class="panel formulario-panel" *ngIf="vistaActual() === 'crear'">
+    <h2>Crear canción</h2>
+
+    <form (ngSubmit)="guardarCancion()">
+
+      <label>Título</label>
+      <input
+        type="text"
+        name="titulo"
+        [(ngModel)]="titulo"
+        placeholder="Ej: Despacito"
+        required
+      />
+
+      <label>Artista(s)</label>
+      <input
+        type="text"
+        name="nombreArtista"
+        [(ngModel)]="nombreArtista"
+        placeholder="Ej: Luis Fonsi, Daddy Yankee"
+        required
+      />
+
+      <label>Género(s)</label>
+      <input
+        type="text"
+        name="nombreGenero"
+        [(ngModel)]="nombreGenero"
+        placeholder="Ej: Pop, Reggaeton"
+        required
+      />
+
+      <label>Duración en segundos</label>
+      <input
+        type="number"
+        name="duracion"
+        [(ngModel)]="duracion"
+        placeholder="Ej: 270"
+        required
+      />
+
+      <label>URL de YouTube</label>
+      <input
+        type="text"
+        name="urlAudio"
+        [(ngModel)]="urlAudio"
+        placeholder="https://www.youtube.com/watch?v=..."
+        required
+      />
+
+      <label>Letra</label>
+      <textarea
+        name="letra"
+        [(ngModel)]="letra"
+        rows="7"
+        placeholder="Pega aquí la letra de la canción">
+      </textarea>
+
+      <div class="acciones-form">
+        <button class="btn-guardar" type="submit">
+          Crear canción
+        </button>
+
+        <button class="btn-cancelar" type="button" (click)="limpiarFormulario()">
+          Limpiar
+        </button>
+      </div>
+
+    </form>
+  </section>
+
+  <section class="panel lista-panel" *ngIf="vistaActual() === 'listar'">
+    <div class="lista-header">
+      <div>
+        <h2>Canciones registradas</h2>
+        <p>{{ canciones().length }} canción(es) en la base de datos</p>
+      </div>
+
+      <button class="btn-guardar" type="button" (click)="cambiarVista('crear')">
+        Nueva canción
+      </button>
+    </div>
+
+    <div class="tabla-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Título</th>
+            <th>Artista(s)</th>
+            <th>Género(s)</th>
+            <th>Duración</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <tr *ngFor="let cancion of canciones()">
+            <td>{{ cancion.id }}</td>
+            <td>{{ cancion.titulo }}</td>
+            <td>{{ cancion.artistas?.join(', ') || 'Sin artista' }}</td>
+            <td>{{ cancion.generos?.join(', ') || 'Sin género' }}</td>
+            <td>{{ cancion.duracion }}s</td>
+
+            <td class="acciones-tabla">
+              <button class="btn-editar" type="button" (click)="editarCancion(cancion)">
+                Editar
+              </button>
+
+              <button class="btn-eliminar" type="button" (click)="eliminarCancion(cancion.id)">
+                Eliminar
+              </button>
+            </td>
+          </tr>
+
+          <tr *ngIf="canciones().length === 0">
+            <td colspan="6" class="vacio">
+              No hay canciones registradas.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="modal" *ngIf="modalAbierto()">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h2>Editar canción</h2>
+        <button class="btn-cerrar" type="button" (click)="limpiarFormulario()">×</button>
+      </div>
+
+      <form (ngSubmit)="guardarCancion()">
+
+        <label>Título</label>
+        <input
+          type="text"
+          name="tituloModal"
+          [(ngModel)]="titulo"
+          required
+        />
+
+        <label>Artista(s)</label>
+        <input
+          type="text"
+          name="nombreArtistaModal"
+          [(ngModel)]="nombreArtista"
+          required
+        />
+
+        <label>Género(s)</label>
+        <input
+          type="text"
+          name="nombreGeneroModal"
+          [(ngModel)]="nombreGenero"
+          required
+        />
+
+        <label>Duración</label>
+        <input
+          type="number"
+          name="duracionModal"
+          [(ngModel)]="duracion"
+          required
+        />
+
+        <label>URL de YouTube</label>
+        <input
+          type="text"
+          name="urlAudioModal"
+          [(ngModel)]="urlAudio"
+          required
+        />
+
+        <label>Letra</label>
+        <textarea
+          name="letraModal"
+          [(ngModel)]="letra"
+          rows="6">
+        </textarea>
+
+        <div class="acciones-form">
+          <button class="btn-guardar" type="submit">
+            Guardar cambios
+          </button>
+
+          <button class="btn-cancelar" type="button" (click)="limpiarFormulario()">
+            Cancelar
+          </button>
+        </div>
+
+      </form>
+
+    </div>
+  </div>
+
+</div>
