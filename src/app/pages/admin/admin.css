@@ -79,7 +79,7 @@
 }
 
 .formulario-panel {
-  max-width: 680px;
+  max-width: 760px;
   margin: 0 auto;
 }
 
@@ -102,6 +102,7 @@ label {
 input,
 textarea {
   width: 100%;
+  box-sizing: border-box;
   padding: 14px 16px;
   border-radius: 15px;
   border: 1px solid rgba(148, 163, 184, 0.35);
