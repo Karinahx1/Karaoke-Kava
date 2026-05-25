@@ -8,4 +8,4 @@ export const supabase = createClient(
 
 /**
  * Este se encarga de hacer la conexión con base de datos
- */
+ */ 
