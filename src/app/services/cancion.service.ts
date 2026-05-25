@@ -1,42 +1,30 @@
 import { Injectable } from '@angular/core';
-import { supabase } from '../core/supabase.client';
+import { HttpClient } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class CancionService {
 
-  /**
-   * Obtiene todas las canciones registradas.
-   */
+  private apiUrl = `${environment.apiUrl}/canciones`;
+
+  constructor(private http: HttpClient) {}
+
   async obtenerCanciones() {
-    const { data, error } = await supabase
-      .from('tbl_cancion')
-      .select('*')
-      .order('id', { ascending: true });
+    const response: any = await firstValueFrom(
+      this.http.get(this.apiUrl)
+    );
 
-    if (error) {
-      throw error;
-    }
-
-    return data;
+    return response.data;
   }
 
-  /**
-   * Obtiene una canción por su id.
-   */
   async obtenerCancionPorId(id: number) {
-    const { data, error } = await supabase
-      .from('tbl_cancion')
-      .select('*')
-      .eq('id', id)
-      .single();
+    const response: any = await firstValueFrom(
+      this.http.get(`${this.apiUrl}/${id}`)
+    );
 
-    if (error) {
-      throw error;
-    }
-
-    return data;
+    return response.data;
   }
 }
-/** Se hacen las consultas en la base de datos */
