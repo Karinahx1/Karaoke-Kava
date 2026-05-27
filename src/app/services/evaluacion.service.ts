@@ -1,48 +1,28 @@
-
-
 import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class EvaluacionService {
+  private apiUrl = `${environment.apiUrl}/evaluaciones/practica`;
 
-  /**
-   * URL de la Edge Function desplegada en Supabase
-   */
-  private url = 'https://huudymretpzgwfkzyrfb.supabase.co/functions/v1/evaluar-practica';
+  constructor(private http: HttpClient) {}
 
-  /**
-   * Llama a la función backend para evaluar una práctica.
-   *
-   * Enviamos:
-   * - idPractica: para que la función consulte la práctica y la canción
-   * - transcripcion: texto detectado por el navegador
-   * - duracionAudio: duración total de la interpretación
-   */
   async evaluarPractica(data: {
-  idPractica: number;
-  transcripcion: string;
-  duracionAudio: number;
-  rmsPromedio: number;
-  porcentajeSilencio: number;
-  porcentajeActividad: number;
-}) {
-    const response = await fetch(this.url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': environment.supabaseKey
-      },
-      body: JSON.stringify(data)
-    });
+    idPractica: number;
+    transcripcion: string;
+    duracionAudio: number;
+    rmsPromedio: number;
+    porcentajeSilencio: number;
+    porcentajeActividad: number;
+  }) {
+    const response: any = await firstValueFrom(
+      this.http.post(this.apiUrl, data)
+    );
 
-    if (!response.ok) {
-      const textoError = await response.text();
-      throw new Error(`Error en la evaluación: ${textoError}`);
-    }
-
-    return await response.json();
+    return response.data;
   }
 }

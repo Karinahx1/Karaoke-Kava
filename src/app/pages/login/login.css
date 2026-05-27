@@ -5,6 +5,7 @@
   align-items: center;
   background:
     radial-gradient(circle at top left, rgba(124, 58, 237, 0.35), transparent 35%),
+    radial-gradient(circle at bottom right, rgba(37, 99, 235, 0.25), transparent 35%),
     linear-gradient(135deg, #020617, #0f172a);
   padding: 24px;
   font-family: Arial, sans-serif;
@@ -13,51 +14,13 @@
 .auth-card {
   width: 100%;
   max-width: 430px;
-  background: rgba(15, 23, 42, 0.9);
+  background: rgba(15, 23, 42, 0.92);
   color: white;
-  border-radius: 22px;
-  padding: 32px;
+  border-radius: 24px;
+  padding: 34px;
   border: 1px solid rgba(148, 163, 184, 0.25);
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
-}
-
-h1 {
-  margin: 10px 0;
-  font-size: 2rem;
-}
-
-p {
-  color: #cbd5e1;
-}
-
-form {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-top: 24px;
-}
-
-label {
-  font-weight: bold;
-}
-
-input {
-  padding: 14px;
-  border-radius: 12px;
-  border: 1px solid #475569;
-  background: #020617;
-  color: white;
-}
-
-.btn-principal {
-  margin-top: 12px;
-  padding: 14px;
-  border: none;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #2563eb, #7c3aed);
-  color: white;
-  font-weight: bold;
-  cursor: pointer;
+  backdrop-filter: blur(14px);
 }
 
 .btn-volver {
@@ -65,17 +28,81 @@ input {
   color: #c4b5fd;
   border: none;
   cursor: pointer;
+  font-weight: 600;
+  margin-bottom: 18px;
 }
 
-.cambio {
-  margin-top: 20px;
-  text-align: center;
+.auth-logo {
+  width: 58px;
+  height: 58px;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  box-shadow: 0 14px 35px rgba(124, 58, 237, 0.35);
+  margin-bottom: 18px;
 }
 
-.cambio button {
-  background: transparent;
-  border: none;
-  color: #60a5fa;
-  font-weight: bold;
+.logo-icon {
+  font-size: 1.8rem;
+}
+
+h1 {
+  margin: 10px 0;
+  font-size: 2rem;
+}
+
+.descripcion {
+  color: #cbd5e1;
+  line-height: 1.5;
+  margin-bottom: 28px;
+}
+
+.btn-google {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(226, 232, 240, 0.25);
+  background: #f8fafc;
+  color: #0f172a;
+  font-weight: 800;
   cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+}
+
+.btn-google:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.35);
+}
+
+.btn-google:disabled {
+  cursor: not-allowed;
+  opacity: 0.75;
+}
+
+.google-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: white;
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-family: Arial, sans-serif;
+  border: 1px solid #e2e8f0;
+}
+
+.nota-login {
+  margin-top: 22px;
+  color: #94a3b8;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  text-align: center;
 }

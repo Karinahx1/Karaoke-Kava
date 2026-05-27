@@ -1,37 +1,28 @@
 <div class="auth-container">
   <section class="auth-card">
-    <button class="btn-volver" (click)="volverInicio()">← Volver</button>
+    <button class="btn-volver" type="button" (click)="volverInicio()">← Volver</button>
+
+    <div class="auth-logo">
+      <span class="logo-icon">🎤</span>
+    </div>
 
     <h1>Iniciar sesión</h1>
-    <p>Entra a tu cuenta para continuar practicando.</p>
+    <p class="descripcion">
+      Entra a Karaoke Kava con tu cuenta de Google y continúa practicando tus canciones favoritas.
+    </p>
 
-    <form (ngSubmit)="iniciarSesion()">
-      <label>Email</label>
-      <input
-        type="email"
-        name="email"
-        [(ngModel)]="email"
-        placeholder="tuemail@correo.com"
-        required
-      />
+    <button
+      class="btn-google"
+      type="button"
+      (click)="loginGoogle()"
+      [disabled]="cargando"
+    >
+      <span class="google-icon">G</span>
+      <span>{{ cargando ? 'Redirigiendo...' : 'Continuar con Google' }}</span>
+    </button>
 
-      <label>Contraseña</label>
-      <input
-        type="password"
-        name="password"
-        [(ngModel)]="password"
-        placeholder="Tu contraseña"
-        required
-      />
-
-      <button class="btn-principal" type="submit">
-        Iniciar sesión
-      </button>
-    </form>
-
-    <p class="cambio">
-      ¿No tienes cuenta?
-      <button (click)="irRegistro()">Regístrate</button>
+    <p class="nota-login">
+      Usamos Google para proteger tu acceso y evitar manejar contraseñas dentro de la aplicación.
     </p>
   </section>
 </div>
