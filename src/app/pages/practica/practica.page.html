@@ -1,7 +1,6 @@
 <div class="contenedor-practica">
 
   <header class="encabezado">
-
     <h1>Modo práctica 🎤</h1>
     <p class="subtitulo">
       Elige una canción, canta y recibe tu resultado.
@@ -66,6 +65,25 @@
   <section class="panel panel-grabacion">
     <h2>Grabación</h2>
 
+    <p *ngIf="speechSinSoporte()" class="estado aviso">
+      ⚠️ Tu navegador no soporta reconocimiento de voz. El puntaje de letra será 0.
+    </p>
+
+    <div *ngIf="grabando()" class="metricas-en-vivo">
+      <div class="metrica-item">
+        <span class="metrica-label">Nota detectada</span>
+        <span class="nota-badge">{{ notaDetectada() }}</span>
+      </div>
+      <div class="metrica-item">
+        <span class="metrica-label">Precisión de tono</span>
+        <span class="metrica-valor">{{ puntajePitch() }}%</span>
+      </div>
+    </div>
+
+    <p *ngIf="transcripcionInterim()" class="estado transcripcion-interim">
+      <em>{{ transcripcionInterim() }}</em>
+    </p>
+
     <p *ngIf="transcripcionVoz()" class="estado">
       <strong>Transcripción detectada:</strong> {{ transcripcionVoz() }}
     </p>
@@ -87,21 +105,55 @@
     </p>
   </section>
 
-  <section class="panel panel-resultado" *ngIf="practicaEvaluada()">
+  <section class="panel panel-resultado" *ngIf="practicaEvaluada() || resultadoFinal()">
     <h2>Resultado de la práctica</h2>
 
-    <div class="tarjeta-puntaje">
-      <span class="puntaje-label">Puntaje</span>
-      <span class="puntaje-valor">{{ practicaEvaluada()?.puntaje }}</span>
+    <!-- Puntaje de tono y letra (nuevo sistema) -->
+    <div *ngIf="resultadoFinal() as resultado" class="resultado-score">
+      <div class="tarjeta-puntaje tarjeta-final">
+        <span class="puntaje-label">Puntaje final</span>
+        <span class="puntaje-valor">{{ resultado.finalScore }}</span>
+        <span class="etiqueta-rendimiento">{{ resultado.label }}</span>
+      </div>
+
+      <div class="desglose-score">
+        <div class="score-item">
+          <span class="score-nombre">🎵 Precisión de tono</span>
+          <div class="barra-progreso">
+            <div
+              class="barra-relleno barra-pitch"
+              [style.width.%]="resultado.pitchScore">
+            </div>
+          </div>
+          <span class="score-valor">{{ resultado.pitchScore }}%</span>
+        </div>
+
+        <div class="score-item">
+          <span class="score-nombre">📝 Precisión de letra</span>
+          <div class="barra-progreso">
+            <div
+              class="barra-relleno barra-letra"
+              [style.width.%]="resultado.lyricsScore">
+            </div>
+          </div>
+          <span class="score-valor">{{ resultado.lyricsScore }}%</span>
+        </div>
+      </div>
     </div>
 
-    <div class="detalle-resultado">
+    <!-- Resultado de evaluación de IA (sistema original, se mantiene) -->
+    <div *ngIf="practicaEvaluada() as evaluada" class="detalle-resultado">
+      <div *ngIf="!resultadoFinal()" class="tarjeta-puntaje">
+        <span class="puntaje-label">Puntaje</span>
+        <span class="puntaje-valor">{{ evaluada.puntaje }}</span>
+      </div>
+
       <p>
-        <strong>Feedback:</strong> {{ practicaEvaluada()?.feedback }}
+        <strong>Feedback:</strong> {{ evaluada.feedback }}
       </p>
 
       <p>
-        <strong>Transcripción:</strong> {{ practicaEvaluada()?.transcripcion }}
+        <strong>Transcripción:</strong> {{ evaluada.transcripcion }}
       </p>
 
       <p *ngIf="duracionAudio() > 0">
@@ -116,7 +168,5 @@
       {{ cancionSeleccionada()?.letra }}
     </div>
   </section>
-
-  
 
 </div>

@@ -242,6 +242,130 @@ body {
   font-weight: 700;
 }
 
+/* ── Live metrics (pitch + note during recording) ──────────────────────── */
+
+.metricas-en-vivo {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+  padding: 14px 18px;
+  background: rgba(139, 92, 246, 0.1);
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  border-radius: 14px;
+}
+
+.metrica-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.metrica-label {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.metrica-valor {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #c4b5fd;
+}
+
+.nota-badge {
+  display: inline-block;
+  font-size: 1.4rem;
+  font-weight: 900;
+  color: #f59e0b;
+  min-width: 44px;
+  text-shadow: 0 0 14px rgba(245, 158, 11, 0.5);
+}
+
+.transcripcion-interim {
+  color: #64748b;
+  font-style: italic;
+}
+
+/* Speech API unavailable warning */
+.aviso {
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.08);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+
+/* ── Score result breakdown ─────────────────────────────────────────────── */
+
+.resultado-score {
+  margin-bottom: 24px;
+}
+
+.tarjeta-final {
+  width: auto;
+  min-width: 170px;
+  max-width: 260px;
+  padding: 20px 28px;
+}
+
+.etiqueta-rendimiento {
+  margin-top: 6px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #c4b5fd;
+  letter-spacing: 0.02em;
+}
+
+.desglose-score {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.score-item {
+  display: grid;
+  grid-template-columns: 200px 1fr 56px;
+  align-items: center;
+  gap: 12px;
+}
+
+.score-nombre {
+  font-size: 0.95rem;
+  color: #e2e8f0;
+  white-space: nowrap;
+}
+
+.barra-progreso {
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.15);
+  overflow: hidden;
+}
+
+.barra-relleno {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.6s ease;
+}
+
+.barra-pitch {
+  background: linear-gradient(90deg, #7c3aed, #a78bfa);
+}
+
+.barra-letra {
+  background: linear-gradient(90deg, #2563eb, #60a5fa);
+}
+
+.score-valor {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #f8fafc;
+  text-align: right;
+}
+
 @media (max-width: 768px) {
   .contenedor-practica {
     padding: 22px 14px 42px;
@@ -268,5 +392,19 @@ body {
   .letra {
     font-size: 0.98rem;
     max-height: 320px;
+  }
+
+  .score-item {
+    grid-template-columns: 1fr 56px;
+    grid-template-rows: auto auto;
+  }
+
+  .score-nombre {
+    grid-column: 1 / -1;
+  }
+
+  .tarjeta-final {
+    max-width: 100%;
+    width: 100%;
   }
 }

@@ -6,9 +6,10 @@ import { StorageService } from '../../services/storage.service';
 import { PracticaService } from '../../services/practica.service';
 import { EvaluacionService } from '../../services/evaluacion.service';
 import { CancionService } from '../../services/cancion.service';
+import { ScoreService, ResultadoFinal } from '../../services/score.service';
 
-// API de reconocimiento de voz del navegador
 declare var webkitSpeechRecognition: any;
+declare var SpeechRecognition: any;
 
 @Component({
   selector: 'app-practica',
@@ -53,11 +54,16 @@ export class PracticaPage implements OnInit {
   audioUrl = signal<string | null>(null);
   practicaCreada = signal<any | null>(null);
   practicaEvaluada = signal<any | null>(null);
+
+  /** Palabras finales confirmadas por el reconocimiento de voz */
   transcripcionVoz = signal<string>('');
+  /** Texto parcial aún no confirmado (se muestra en tiempo real) */
+  transcripcionInterim = signal<string>('');
+
   /**
- * Indica si la práctica ya fue iniciada.
- * La usamos para cargar el video con autoplay.
- */
+   * Indica si la práctica ya fue iniciada.
+   * La usamos para cargar el video con autoplay.
+   */
   practicaIniciada = signal(false);
 
   /**
@@ -83,6 +89,7 @@ export class PracticaPage implements OnInit {
   analyser!: AnalyserNode;
   sourceNode!: MediaStreamAudioSourceNode;
   datosTiempo!: Float32Array;
+  datosPitch!: Float32Array;
   analisisActivo = false;
   animationFrameId = 0;
 
@@ -101,6 +108,24 @@ export class PracticaPage implements OnInit {
   porcentajeSilencio = signal(0);
   porcentajeActividad = signal(0);
 
+  // ── Pitch detection state ────────────────────────────────────────────────
+  /** Frames donde se detectó audio con suficiente volumen */
+  framesConAudio = 0;
+  /** Frames donde el audio activo tenía un tono musical claro */
+  framesConPitch = 0;
+  /** Timestamp del último análisis de pitch (ms) */
+  ultimoAnalisisPitch = 0;
+  /** Nota musical actualmente detectada, ej: "A4" */
+  notaDetectada = signal<string>('--');
+
+  // ── Score state ──────────────────────────────────────────────────────────
+  puntajePitch = signal(0);
+  puntajeLetra = signal(0);
+  resultadoFinal = signal<ResultadoFinal | null>(null);
+  /** true si el navegador no soporta Web Speech API */
+  speechSinSoporte = signal(false);
+  intervaloScore: ReturnType<typeof setInterval> | null = null;
+
   /**
    * IDs temporales para pruebas
    */
@@ -114,6 +139,7 @@ export class PracticaPage implements OnInit {
     private practicaService: PracticaService,
     private evaluacionService: EvaluacionService,
     private cancionService: CancionService,
+    private scoreService: ScoreService,
     private sanitizer: DomSanitizer
   ) {}
 
@@ -134,34 +160,31 @@ export class PracticaPage implements OnInit {
    * Convierte enlaces de YouTube a formato embed.
    */
   convertirYoutubeAEmbed(url: string): string | null {
-  if (!url) return null;
+    if (!url) return null;
 
-  const autoplay = this.practicaIniciada()
-    ? '?autoplay=1&rel=0'
-    : '?rel=0';
+    const autoplay = this.practicaIniciada()
+      ? '?autoplay=1&rel=0'
+      : '?rel=0';
 
-  // Caso 1: ya viene en formato embed
-  if (url.includes('youtube.com/embed/')) {
-    const urlBase = url.split('?')[0];
-    return `${urlBase}${autoplay}`;
+    if (url.includes('youtube.com/embed/')) {
+      const urlBase = url.split('?')[0];
+      return `${urlBase}${autoplay}`;
+    }
+
+    if (url.includes('youtu.be/')) {
+      const partes = url.split('youtu.be/');
+      const idVideo = partes[1]?.split('?')[0];
+      return idVideo ? `https://www.youtube.com/embed/${idVideo}${autoplay}` : null;
+    }
+
+    if (url.includes('watch?v=')) {
+      const partes = url.split('watch?v=');
+      const idVideo = partes[1]?.split('&')[0];
+      return idVideo ? `https://www.youtube.com/embed/${idVideo}${autoplay}` : null;
+    }
+
+    return null;
   }
-
-  // Caso 2: formato corto youtu.be
-  if (url.includes('youtu.be/')) {
-    const partes = url.split('youtu.be/');
-    const idVideo = partes[1]?.split('?')[0];
-    return idVideo ? `https://www.youtube.com/embed/${idVideo}${autoplay}` : null;
-  }
-
-  // Caso 3: formato normal watch?v=
-  if (url.includes('watch?v=')) {
-    const partes = url.split('watch?v=');
-    const idVideo = partes[1]?.split('&')[0];
-    return idVideo ? `https://www.youtube.com/embed/${idVideo}${autoplay}` : null;
-  }
-
-  return null;
-}
 
   /**
    * Carga una canción y prepara el video.
@@ -193,23 +216,40 @@ export class PracticaPage implements OnInit {
   }
 
   /**
-   * Inicia reconocimiento de voz.
+   * Inicia reconocimiento de voz con soporte para resultados interinos.
+   * Si el navegador no soporta la API, muestra una advertencia no bloqueante.
    */
   iniciarReconocimiento() {
-    this.recognition = new webkitSpeechRecognition();
+    const SR =
+      (typeof SpeechRecognition !== 'undefined' && SpeechRecognition) ||
+      (typeof webkitSpeechRecognition !== 'undefined' && webkitSpeechRecognition);
 
+    if (!SR) {
+      this.speechSinSoporte.set(true);
+      console.warn('Web Speech API no disponible. El puntaje de letra será 0.');
+      return;
+    }
+
+    this.recognition = new SR();
     this.recognition.lang = 'es-ES';
     this.recognition.continuous = true;
-    this.recognition.interimResults = false;
+    this.recognition.interimResults = true;
 
     this.recognition.onresult = (event: any) => {
-      let textoAcumulado = this.transcripcionVoz();
+      let textoFinal = this.transcripcionVoz();
+      let textoInterim = '';
 
       for (let i = event.resultIndex; i < event.results.length; i++) {
-        textoAcumulado += ' ' + event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          textoFinal += ' ' + event.results[i][0].transcript;
+        } else {
+          textoInterim += event.results[i][0].transcript;
+        }
       }
 
-      this.transcripcionVoz.set(textoAcumulado.trim());
+      this.transcripcionVoz.set(textoFinal.trim());
+      this.transcripcionInterim.set(textoInterim);
+
       console.log('Transcripción parcial/real:', this.transcripcionVoz());
     };
 
@@ -226,15 +266,12 @@ export class PracticaPage implements OnInit {
   detenerReconocimiento() {
     if (this.recognition) {
       this.recognition.stop();
+      this.transcripcionInterim.set('');
     }
   }
 
   /**
-   * Inicia el análisis básico del audio.
-   * Aquí medimos:
-   * - RMS promedio
-   * - actividad
-   * - silencio
+   * Inicia el análisis de audio: RMS, silencio/actividad, y detección de tono.
    */
   iniciarAnalisisAudio(stream: MediaStream) {
     this.audioContext = new AudioContext();
@@ -245,16 +282,22 @@ export class PracticaPage implements OnInit {
 
     this.analyser.fftSize = 2048;
     this.datosTiempo = new Float32Array(this.analyser.fftSize);
+    this.datosPitch = new Float32Array(this.analyser.fftSize);
 
-    // Reiniciar métricas
+    // Reiniciar métricas RMS
     this.muestrasAnalizadas = 0;
     this.muestrasConActividad = 0;
     this.muestrasEnSilencio = 0;
     this.sumaRms = 0;
-
     this.rmsPromedio.set(0);
     this.porcentajeSilencio.set(0);
     this.porcentajeActividad.set(0);
+
+    // Reiniciar métricas de pitch
+    this.framesConAudio = 0;
+    this.framesConPitch = 0;
+    this.ultimoAnalisisPitch = 0;
+    this.notaDetectada.set('--');
 
     this.analisisActivo = true;
 
@@ -263,11 +306,11 @@ export class PracticaPage implements OnInit {
 
       this.analyser.getFloatTimeDomainData(this.datosTiempo as any);
 
+      // RMS para métricas de actividad/silencio (lógica original)
       let sumaCuadrados = 0;
       for (let i = 0; i < this.datosTiempo.length; i++) {
         sumaCuadrados += this.datosTiempo[i] * this.datosTiempo[i];
       }
-
       const rms = Math.sqrt(sumaCuadrados / this.datosTiempo.length);
 
       this.muestrasAnalizadas++;
@@ -279,10 +322,96 @@ export class PracticaPage implements OnInit {
         this.muestrasConActividad++;
       }
 
+      // Detección de tono cada ~100ms para no saturar el hilo principal
+      const ahora = performance.now();
+      if (ahora - this.ultimoAnalisisPitch >= 100) {
+        this.ultimoAnalisisPitch = ahora;
+        this.analyser.getFloatTimeDomainData(this.datosPitch as any);
+        this.procesarPitch(this.datosPitch);
+      }
+
       this.animationFrameId = requestAnimationFrame(analizar);
     };
 
     analizar();
+  }
+
+  /**
+   * Calcula el tono dominante en el frame actual y actualiza puntajePitch.
+   * El puntaje mide qué porcentaje del audio activo tiene un tono musical claro:
+   * un proxy de "qué tan afinado está cantando el usuario".
+   */
+  private procesarPitch(buffer: Float32Array) {
+    const freq = this.detectarFrecuencia(buffer, this.audioContext.sampleRate);
+
+    let rms = 0;
+    for (let i = 0; i < buffer.length; i++) rms += buffer[i] * buffer[i];
+    rms = Math.sqrt(rms / buffer.length);
+
+    if (rms >= 0.01) {
+      this.framesConAudio++;
+      if (freq !== null) {
+        this.framesConPitch++;
+        this.notaDetectada.set(this.scoreService.hzANota(freq));
+      } else {
+        this.notaDetectada.set('--');
+      }
+    }
+
+    const pitchScore = this.framesConAudio > 0
+      ? Math.round((this.framesConPitch / this.framesConAudio) * 100)
+      : 0;
+    this.puntajePitch.set(pitchScore);
+  }
+
+  /**
+   * Autocorrelation-based pitch detection (McLeod-style).
+   * Returns the dominant frequency in Hz, or null if the signal has no clear pitch.
+   * The clarity threshold (0.5) filters out noise and speech that isn't on pitch.
+   */
+  private detectarFrecuencia(buffer: Float32Array, sampleRate: number): number | null {
+    const n = buffer.length;
+    const half = n >> 1;
+
+    let rms = 0;
+    for (let i = 0; i < n; i++) rms += buffer[i] * buffer[i];
+    rms = Math.sqrt(rms / n);
+    if (rms < 0.01) return null;
+
+    // Autocorrelación — O(n²/4) con n=2048 → ~500K ops, aceptable a 10 Hz
+    const c = new Float32Array(half);
+    for (let lag = 0; lag < half; lag++) {
+      for (let j = 0; j < half; j++) {
+        c[lag] += buffer[j] * buffer[j + lag];
+      }
+    }
+
+    // Saltar la pendiente descendente inicial (pico en lag=0)
+    let inicio = 0;
+    while (inicio < half - 1 && c[inicio] > c[inicio + 1]) inicio++;
+
+    // Buscar el máximo global tras ese primer valle
+    let maxCorr = -Infinity;
+    let maxLag = -1;
+    for (let i = inicio; i < half; i++) {
+      if (c[i] > maxCorr) {
+        maxCorr = c[i];
+        maxLag = i;
+      }
+    }
+
+    // Descartar si la señal no tiene suficiente claridad tonal
+    if (maxLag <= 0 || c[0] === 0 || maxCorr / c[0] < 0.5) return null;
+
+    // Interpolación cuadrática para precisión sub-muestra
+    if (maxLag > 0 && maxLag < half - 1) {
+      const denom = 2 * c[maxLag] - c[maxLag + 1] - c[maxLag - 1];
+      if (denom !== 0) {
+        maxLag += (c[maxLag + 1] - c[maxLag - 1]) / (2 * denom);
+      }
+    }
+
+    return sampleRate / maxLag;
   }
 
   /**
@@ -320,18 +449,34 @@ export class PracticaPage implements OnInit {
     this.mediaRecorder = new MediaRecorder(stream);
     this.audioChunks = [];
 
-    // Reiniciar estados de una nueva práctica
+    // Reiniciar todos los estados de la práctica anterior
     this.transcripcionVoz.set('');
+    this.transcripcionInterim.set('');
     this.duracionAudio.set(0);
     this.audioBlob.set(null);
     this.audioUrl.set(null);
     this.practicaCreada.set(null);
     this.practicaEvaluada.set(null);
+    this.resultadoFinal.set(null);
+    this.puntajePitch.set(0);
+    this.puntajeLetra.set(0);
+    this.speechSinSoporte.set(false);
 
     this.tiempoInicioGrabacion = Date.now();
 
     this.iniciarReconocimiento();
     this.iniciarAnalisisAudio(stream);
+
+    // Enviar actualización de puntaje cada 5 segundos
+    this.intervaloScore = setInterval(async () => {
+      await this.scoreService.actualizarPuntaje({
+        songId: this.idCancionPrueba,
+        userId: this.idUsuarioPrueba,
+        pitchScore: this.puntajePitch(),
+        lyricsScore: this.puntajeLetra(),
+        timestamp: Date.now()
+      });
+    }, 5000);
 
     this.mediaRecorder.ondataavailable = (event) => {
       if (event.data.size > 0) {
@@ -353,6 +498,10 @@ export class PracticaPage implements OnInit {
       console.log('Duración del audio:', this.duracionAudio());
       console.log('Transcripción capturada:', this.transcripcionVoz());
 
+      // Score runs first — independent of storage/DB availability
+      await this.calcularYEnviarPuntajeFinal();
+
+      // Upload and AI evaluation require Supabase storage + Edge Function
       await this.subirAudioGrabado();
     };
 
@@ -361,7 +510,7 @@ export class PracticaPage implements OnInit {
   }
 
   /**
-   * Detiene grabación, reconocimiento y análisis.
+   * Detiene grabación, reconocimiento, análisis e intervalo de score.
    */
   detenerGrabacion() {
     if (this.mediaRecorder && this.grabando()) {
@@ -370,19 +519,23 @@ export class PracticaPage implements OnInit {
       this.detenerReconocimiento();
       this.detenerAnalisisAudio();
     }
+
+    if (this.intervaloScore) {
+      clearInterval(this.intervaloScore);
+      this.intervaloScore = null;
+    }
+
     this.practicaIniciada.set(false);
 
-const cancion = this.cancionSeleccionada();
-
-if (cancion) {
-  const urlEmbed = this.convertirYoutubeAEmbed(cancion.url_audio);
-
-  if (urlEmbed) {
-    this.videoUrl.set(
-      this.sanitizer.bypassSecurityTrustResourceUrl(urlEmbed)
-    );
-  }
-}
+    const cancion = this.cancionSeleccionada();
+    if (cancion) {
+      const urlEmbed = this.convertirYoutubeAEmbed(cancion.url_audio);
+      if (urlEmbed) {
+        this.videoUrl.set(
+          this.sanitizer.bypassSecurityTrustResourceUrl(urlEmbed)
+        );
+      }
+    }
   }
 
   /**
@@ -443,6 +596,7 @@ if (cancion) {
 
   /**
    * Envía la práctica al backend para evaluación.
+   * Independientemente del resultado, siempre calcula y persiste el puntaje de score.
    */
   async evaluarPractica() {
     try {
@@ -480,29 +634,63 @@ if (cancion) {
   }
 
   /**
- * Inicia la práctica completa:
- * - activa autoplay del video
- * - recarga la URL del video
- * - inicia grabación, transcripción y análisis de audio
- */
-async iniciarPracticaCompleta() {
-  if (!this.cancionSeleccionada()) {
-    console.warn('No hay canción seleccionada.');
-    return;
+   * Calcula el puntaje de letra usando Levenshtein, luego llama al backend
+   * para persistir y obtener el puntaje final consolidado.
+   * Si el backend no está disponible, calcula el resultado localmente.
+   */
+  private async calcularYEnviarPuntajeFinal() {
+    const letra = this.cancionSeleccionada()?.letra ?? '';
+    const transcripcion = this.transcripcionVoz();
+
+    const lyricsScore = this.scoreService.calcularPuntajeLetra(transcripcion, letra);
+    this.puntajeLetra.set(lyricsScore);
+
+    const resultado = await this.scoreService.finalizarPuntaje({
+      songId: this.idCancionPrueba,
+      userId: this.idUsuarioPrueba,
+      finalPitchScore: this.puntajePitch(),
+      finalLyricsScore: lyricsScore
+    });
+
+    if (resultado) {
+      this.resultadoFinal.set(resultado);
+    } else {
+      // Fallback local si el backend no está disponible
+      const finalScore =
+        Math.round((this.puntajePitch() * 0.6 + lyricsScore * 0.4) * 100) / 100;
+      this.resultadoFinal.set({
+        finalScore,
+        pitchScore: this.puntajePitch(),
+        lyricsScore,
+        label: this.scoreService.calcularEtiqueta(finalScore)
+      });
+    }
   }
 
-  this.practicaIniciada.set(true);
+  /**
+   * Inicia la práctica completa:
+   * - activa autoplay del video
+   * - recarga la URL del video
+   * - inicia grabación, transcripción y análisis de audio
+   */
+  async iniciarPracticaCompleta() {
+    if (!this.cancionSeleccionada()) {
+      console.warn('No hay canción seleccionada.');
+      return;
+    }
 
-  const urlEmbed = this.convertirYoutubeAEmbed(
-    this.cancionSeleccionada().url_audio
-  );
+    this.practicaIniciada.set(true);
 
-  if (urlEmbed) {
-    this.videoUrl.set(
-      this.sanitizer.bypassSecurityTrustResourceUrl(urlEmbed)
+    const urlEmbed = this.convertirYoutubeAEmbed(
+      this.cancionSeleccionada().url_audio
     );
-  }
 
-  await this.iniciarGrabacion();
-}
+    if (urlEmbed) {
+      this.videoUrl.set(
+        this.sanitizer.bypassSecurityTrustResourceUrl(urlEmbed)
+      );
+    }
+
+    await this.iniciarGrabacion();
+  }
 }
