@@ -2,64 +2,84 @@
   <section class="auth-card">
     <button class="btn-volver" (click)="volverInicio()">← Volver</button>
 
-    <h1>Registrarse</h1>
-    <p>Crea tu cuenta para comenzar a practicar.</p>
+    <div class="auth-logo">
+      <span class="logo-icon">🎤</span>
+    </div>
+
+    <h1>Crear cuenta</h1>
+    <p class="descripcion">Completa tus datos y continúa con Google para empezar a cantar.</p>
 
     <form (ngSubmit)="registrarse()">
-      <label>Nombre</label>
-      <input
-        type="text"
-        name="nombre"
-        [(ngModel)]="nombre"
-        placeholder="Tu nombre"
-        required
-      />
 
-      <label>Apellido</label>
-      <input
-        type="text"
-        name="apellido"
-        [(ngModel)]="apellido"
-        placeholder="Tu apellido"
-        required
-      />
-      <label>Número de documento</label>
-<input
-  type="text"
-  name="numDocumento"
-  [(ngModel)]="numDocumento"
-  placeholder="Tu número de documento"
-  required
-/>
+      <div class="form-group">
+        <label for="reg-nombre">Nombre</label>
+        <input
+          id="reg-nombre"
+          type="text"
+          name="nombre"
+          [(ngModel)]="nombre"
+          placeholder="Tu nombre"
+          required
+        />
+      </div>
 
-<label>Género</label>
-<select [(ngModel)]="idGenero">
-  <option [value]="1">Femenino</option>
-  <option [value]="2">Masculino</option>
-  <option [value]="3">Otro</option>
-</select>
+      <div class="form-group">
+        <label for="reg-apellido">Apellido</label>
+        <input
+          id="reg-apellido"
+          type="text"
+          name="apellido"
+          [(ngModel)]="apellido"
+          placeholder="Tu apellido"
+          required
+        />
+      </div>
 
-      <label>Email</label>
-      <input
-        type="email"
-        name="email"
-        [(ngModel)]="email"
-        placeholder="tuemail@correo.com"
-        required
-      />
+      <div class="form-group">
+        <label for="reg-documento">Número de documento</label>
+        <input
+          id="reg-documento"
+          type="text"
+          name="numDocumento"
+          [(ngModel)]="numDocumento"
+          placeholder="Tu número de documento"
+          required
+        />
+      </div>
 
-      <label>Contraseña</label>
-      <input
-        type="password"
-        name="password"
-        [(ngModel)]="password"
-        placeholder="Crea una contraseña"
-        required
-      />
+      <div class="form-group">
+        <label for="reg-genero">Género</label>
+        <div class="select-wrapper">
+          <select id="reg-genero" name="idGenero" [(ngModel)]="idGenero">
+            <option [value]="1">Femenino</option>
+            <option [value]="2">Masculino</option>
+            <option [value]="3">Otro</option>
+          </select>
+          <span class="select-arrow">▾</span>
+        </div>
+      </div>
 
-      <button class="btn-principal" type="submit">
-        Crear cuenta
+      <div class="form-group">
+        <label for="reg-email">Correo electrónico</label>
+        <input
+          id="reg-email"
+          type="email"
+          name="email"
+          [(ngModel)]="email"
+          placeholder="Tu correo de Google"
+          required
+          [class.input-error]="errorEmail"
+        />
+        @if (errorEmail) {
+          <span class="error-msg">{{ errorEmail }}</span>
+        }
+      </div>
+
+      <button class="btn-google-register" type="submit" [disabled]="cargando">
+        <span class="google-icon">G</span>
+        <span>{{ cargando ? 'Verificando...' : 'Registrarse con Google' }}</span>
       </button>
+
     </form>
 
     <p class="cambio">

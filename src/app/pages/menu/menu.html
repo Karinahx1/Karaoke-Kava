@@ -1,0 +1,101 @@
+<!-- Contenedor general del menú principal con fondo radial oscuro de Karaoke Kava -->
+<div class="menu-container">
+
+  <!-- Estado de carga: Spinner animado premium con efecto glassmorphism -->
+  @if (cargando()) {
+    <div class="loading-card">
+      <div class="spinner"></div>
+      <p class="loading-text">Cargando tu perfil musical...</p>
+    </div>
+  } 
+  
+  <!-- Contenido principal una vez la sesión y el perfil han cargado correctamente -->
+  @else if (usuario()) {
+    <div class="menu-card">
+      
+      <!-- Cabecera del perfil de usuario: Foto de Google, Nombre, Correo y Nivel -->
+      <header class="menu-header">
+        <div class="profile-section">
+          <!-- Foto de perfil de Google con bordes redondeados y sombra luminosa -->
+          @if (usuario().user_metadata?.avatar_url || usuario().user_metadata?.picture) {
+            <img 
+              [src]="usuario().user_metadata?.avatar_url || usuario().user_metadata?.picture" 
+              alt="Foto de perfil de Google" 
+              class="profile-img"
+            />
+          } @else {
+            <!-- Marcador de posición (avatar) con la inicial del usuario si no tiene foto -->
+            <div class="profile-placeholder">
+              {{ (usuario().user_metadata?.full_name || usuario().user_metadata?.name || 'U').substring(0, 1).toUpperCase() }}
+            </div>
+          }
+          
+          <div class="profile-info">
+            <h2 class="welcome-text">¡Hola, {{ usuario().user_metadata?.full_name || usuario().user_metadata?.name || 'Vocalista' }}!</h2>
+            <p class="email">{{ usuario().email }}</p>
+          </div>
+        </div>
+
+        <!-- Sección del nivel del usuario de Supabase, estilizada como rango de cantante -->
+        @if (idRolUsuario() === 1) {
+          <div class="level-badge-container">
+            <span class="level-label">Rango Vocal:</span>
+            <span class="level-value">
+              {{ nombreNivel() || 'Sin nivel asignado' }}
+            </span>
+            @if (nivelUsuario() !== null) {
+              <span class="level-number">Nivel {{ nivelUsuario() }}</span>
+            } @else {
+              <span class="level-desc" style="font-size: 0.8rem; color: #94a3b8; font-style: italic; margin-left: auto; text-align: right;">
+                Realiza tu primera práctica para obtener un nivel
+              </span>
+            }
+          </div>
+        } @else if (idRolUsuario() === 2) {
+          <div class="level-badge-container">
+            <span class="level-label">Rol:</span>
+            <span class="level-value" style="color: #a78bfa;">Administrador ⚙️</span>
+          </div>
+        }
+      </header>
+
+      <!-- Cuerpo del Menú Principal: Navegación a las secciones de Karaoke -->
+      <section class="menu-content">
+        <h1>Menú Principal</h1>
+        <p class="subtitle">¿Qué deseas hacer hoy en el escenario?</p>
+
+        <div class="menu-options">
+          <!-- Opción 1: Navegar a la página de Prácticas existente en el proyecto -->
+          @if (idRolUsuario() === 1) {
+            <button class="menu-btn btn-practica" (click)="irPractica()" type="button">
+              <span class="btn-icon">🎤</span>
+              <div class="btn-text">
+                <h3>Comenzar a Cantar</h3>
+                <p>Elige tu pista favorita, grábate y recibe una evaluación en tiempo real de tu desempeño.</p>
+              </div>
+            </button>
+          }
+
+          <!-- Opción 2: Navegar a la sección de administración de canciones -->
+          @if (idRolUsuario() === 2) {
+            <button class="menu-btn btn-admin" (click)="irAdmin()" type="button">
+              <span class="btn-icon">⚙️</span>
+              <div class="btn-text">
+                <h3>Administrar Canciones</h3>
+                <p>Agrega, edita o elimina canciones disponibles en el catálogo de Karaoke Kava.</p>
+              </div>
+            </button>
+          }
+        </div>
+      </section>
+
+      <!-- Pie de página del menú: Acción para Cerrar Sesión -->
+      <footer class="menu-footer">
+        <button class="btn-logout" (click)="cerrarSesion()" type="button">
+          <span class="logout-icon">🚪</span> Cerrar sesión
+        </button>
+      </footer>
+      
+    </div>
+  }
+</div>

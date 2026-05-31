@@ -5,6 +5,8 @@ import { PracticaPage } from './pages/practica/practica.page';
 import { LoginPage } from './pages/login/login';
 import { RegistroPage } from './pages/registro/registro';
 import { AdminPage } from './pages/admin/admin';
+import { MenuPage } from './pages/menu/menu';
+import { authGuard } from './guards/auth.guard';
 
 export const routes: Routes = [
   {
@@ -18,4 +20,9 @@ export const routes: Routes = [
     component: PracticaPage
   },
   { path: 'admin', component: AdminPage },
+  {
+    path: 'auth/callback',
+    component: MenuPage,
+    canActivate: [authGuard]
+  }
 ];

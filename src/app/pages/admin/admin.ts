@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AdminCancionService } from '../../services/admin-cancion.service';
+import { AuthService } from '../../services/auth.service';
 import { supabase } from '../../core/supabase.client';
 
 @Component({
@@ -15,7 +16,7 @@ import { supabase } from '../../core/supabase.client';
 export class AdminPage implements OnInit {
   canciones = signal<any[]>([]);
 
-  vistaActual = signal<'crear' | 'listar'>('crear');
+  vistaActual = signal<'crear' | 'listar'>('listar');
   editando = signal(false);
   modalAbierto = signal(false);
   idEditando = signal<number | null>(null);
@@ -29,11 +30,36 @@ export class AdminPage implements OnInit {
 
   constructor(
     private adminCancionService: AdminCancionService,
-    private router: Router
+    private router: Router,
+    private authService: AuthService
   ) {}
 
   async ngOnInit() {
-    await this.cargarCanciones();
+    try {
+      const authUser = await this.authService.obtenerUsuarioActual();
+      if (!authUser) {
+        this.router.navigate(['/login']);
+        return;
+      }
+
+      // Validar rol del usuario en la base de datos
+      const { data: dbUser, error } = await supabase
+        .from('tbl_usuario')
+        .select('id_rol')
+        .eq('auth_uid', authUser.id)
+        .maybeSingle();
+
+      if (error || !dbUser || dbUser.id_rol !== 2) {
+        console.warn('Acceso denegado: Se requiere rol de administrador.');
+        this.router.navigate(['/auth/callback']); // Redirigir al menú principal protegido
+        return;
+      }
+
+      await this.cargarCanciones();
+    } catch (e) {
+      console.error('Error al validar acceso de administrador:', e);
+      this.router.navigate(['/auth/callback']);
+    }
   }
 
   cambiarVista(vista: 'crear' | 'listar') {

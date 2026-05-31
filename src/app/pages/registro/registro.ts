@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { AuthService } from '../../services/auth.service';
 import { supabase } from '../../core/supabase.client';
 
 @Component({
@@ -14,54 +15,76 @@ export class RegistroPage {
   nombre = '';
   apellido = '';
   email = '';
-  password = '';
   numDocumento = '';
+  cargando = false;
+  errorEmail = '';
 
-  // Por ahora dejamos género por defecto.
   // Debe existir un registro con id = 1 en tbl_genero_persona.
   idGenero = 1;
 
-  constructor(private router: Router) {}
+  constructor(
+    private router: Router,
+    private authService: AuthService
+  ) {}
 
   async registrarse() {
     try {
-      // 1. Crear usuario en Supabase Auth
-      const { data, error } = await supabase.auth.signUp({
-        email: this.email,
-        password: this.password
-      });
+      this.errorEmail = '';
 
-      if (error) throw error;
-
-      const authUid = data.user?.id;
-
-      if (!authUid) {
-        throw new Error('No se pudo obtener el ID del usuario autenticado.');
+      // Validar campos obligatorios
+      if (!this.nombre.trim() || !this.apellido.trim() || !this.numDocumento.trim() || !this.email.trim()) {
+        alert('Por favor, completa todos los campos del formulario.');
+        return;
       }
 
-      // 2. Guardar también en tbl_usuario
-      const { error: insertError } = await supabase
+      // Validar formato de email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(this.email.trim())) {
+        this.errorEmail = 'Por favor, ingresa un correo electrónico válido.';
+        return;
+      }
+
+      this.cargando = true;
+
+      // Verificar si el correo ya está registrado en tbl_usuario
+      const { data: usuarioExistente, error: errorBusqueda } = await supabase
         .from('tbl_usuario')
-        .insert({
-          nombre: this.nombre,
-          apellido: this.apellido,
-          email: this.email,
-          auth_uid: authUid,
-          id_tipo_documento: 1,
-          num_documento: this.numDocumento,
-          id_genero_persona: this.idGenero,
-          id_estado: 1,
-          id_rol: 1
-        });
+        .select('id, email')
+        .eq('email', this.email.trim().toLowerCase())
+        .maybeSingle();
 
-      if (insertError) throw insertError;
+      if (errorBusqueda) {
+        console.error('Error al verificar el correo:', errorBusqueda);
+        this.cargando = false;
+        alert('Ocurrió un error al validar el correo. Intenta de nuevo.');
+        return;
+      }
 
-      alert('Usuario registrado correctamente. Ahora puedes iniciar sesión.');
-      this.router.navigate(['/login']);
+      if (usuarioExistente) {
+        this.errorEmail = 'Este correo ya está registrado. Por favor, inicia sesión.';
+        this.cargando = false;
+        return;
+      }
+
+      // Guardar temporalmente los datos del perfil en localStorage
+      const tempProfile = {
+        nombre: this.nombre.trim(),
+        apellido: this.apellido.trim(),
+        email: this.email.trim().toLowerCase(),
+        numDocumento: this.numDocumento.trim(),
+        idGenero: this.idGenero
+      };
+
+      localStorage.setItem('temp_registro_perfil', JSON.stringify(tempProfile));
+      console.log('Datos de perfil guardados en localStorage:', tempProfile);
+
+      // Redirigir al inicio de sesión con Google
+      await this.authService.loginConGoogle();
 
     } catch (error: any) {
-      console.error('Error al registrar:', error);
+      console.error('Error al iniciar el registro con Google:', error);
       alert('Error al registrar: ' + error.message);
+      this.cargando = false;
     }
   }
 

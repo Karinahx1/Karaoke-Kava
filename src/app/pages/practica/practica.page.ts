@@ -1,11 +1,14 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { Router } from '@angular/router';
 
 import { StorageService } from '../../services/storage.service';
 import { PracticaService } from '../../services/practica.service';
 import { EvaluacionService } from '../../services/evaluacion.service';
 import { CancionService } from '../../services/cancion.service';
+import { AuthService } from '../../services/auth.service';
+import { supabase } from '../../core/supabase.client';
 
 // API de reconocimiento de voz del navegador
 declare var webkitSpeechRecognition: any;
@@ -102,9 +105,9 @@ export class PracticaPage implements OnInit {
   porcentajeActividad = signal(0);
 
   /**
-   * IDs temporales para pruebas
+   * ID del usuario autenticado (se carga en ngOnInit)
    */
-  idUsuarioPrueba = 1;
+  idUsuario: number | null = null;
   idCancionPrueba = 1;
   idEstadoPracticaPendiente = 3;
   idEstadoPracticaFinalizada = 5;
@@ -114,11 +117,43 @@ export class PracticaPage implements OnInit {
     private practicaService: PracticaService,
     private evaluacionService: EvaluacionService,
     private cancionService: CancionService,
-    private sanitizer: DomSanitizer
+    private sanitizer: DomSanitizer,
+    private authService: AuthService,
+    private router: Router
   ) {}
 
   async ngOnInit() {
     try {
+      // 1. Obtener usuario autenticado de Supabase Auth
+      const authUser = await this.authService.obtenerUsuarioActual();
+      if (!authUser) {
+        this.router.navigate(['/login']);
+        return;
+      }
+
+      // 2. Buscar perfil correspondiente en tbl_usuario
+      const { data: dbUser, error: userError } = await supabase
+        .from('tbl_usuario')
+        .select('*')
+        .eq('auth_uid', authUser.id)
+        .maybeSingle();
+
+      if (userError || !dbUser) {
+        console.error('Error al cargar perfil de usuario:', userError);
+        this.router.navigate(['/auth/callback']);
+        return;
+      }
+
+      // 3. Validar que sea rol Jugador (id_rol === 1)
+      if (dbUser.id_role !== 1 && dbUser.id_rol !== 1) {
+        console.warn('Acceso denegado a práctica: Se requiere rol de jugador.');
+        this.router.navigate(['/auth/callback']);
+        return;
+      }
+
+      this.idUsuario = dbUser.id;
+
+      // 4. Cargar canciones del catálogo
       const listaCanciones = await this.cancionService.obtenerCanciones();
       this.canciones.set(listaCanciones ?? []);
 
@@ -126,7 +161,8 @@ export class PracticaPage implements OnInit {
         await this.seleccionarCancion(this.canciones()[0].id);
       }
     } catch (error) {
-      console.error('Error al cargar canciones:', error);
+      console.error('Error al inicializar la página de prácticas:', error);
+      this.router.navigate(['/auth/callback']);
     }
   }
 
@@ -419,13 +455,13 @@ if (cancion) {
    */
   async crearPractica() {
     try {
-      if (!this.audioUrl()) {
-        console.warn('No existe URL del audio todavía.');
+      if (!this.audioUrl() || this.idUsuario === null) {
+        console.warn('No existe URL del audio o ID de usuario todavía.');
         return;
       }
 
       const practica = await this.practicaService.crearPractica({
-        id_usuario: this.idUsuarioPrueba,
+        id_usuario: this.idUsuario,
         id_cancion: this.idCancionPrueba,
         id_estado: this.idEstadoPracticaPendiente,
         url_audio_usuario: this.audioUrl()!
