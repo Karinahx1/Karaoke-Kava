@@ -76,7 +76,18 @@
             </button>
           }
 
-          <!-- Opción 2: Navegar a la sección de administración de canciones -->
+          <!-- Opción 2: Navegar a la sección de Combates -->
+          @if (idRolUsuario() === 1) {
+            <button class="menu-btn btn-combate" (click)="irCombates()" type="button">
+              <span class="btn-icon">⚔️</span>
+              <div class="btn-text">
+                <h3>Combates 1v1</h3>
+                <p>Desafía a tus amigos o encuentra un oponente de tu nivel para una batalla musical.</p>
+              </div>
+            </button>
+          }
+
+          <!-- Opción 3: Navegar a la sección de administración de canciones -->
           @if (idRolUsuario() === 2) {
             <button class="menu-btn btn-admin" (click)="irAdmin()" type="button">
               <span class="btn-icon">⚙️</span>

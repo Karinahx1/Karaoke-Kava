@@ -1,10 +1,12 @@
 // Importamos lo necesario desde Angular
 import { Component, OnInit, signal } from '@angular/core';
 
-import { RouterOutlet } from '@angular/router';
+import { RouterOutlet, Router, NavigationEnd } from '@angular/router';
 
 // CommonModule permite usar estructuras como @if, @for y otras utilidades comunes
 import { CommonModule } from '@angular/common';
+import { filter } from 'rxjs';
+import { ToastComponent } from './components/toast/toast';
 
 // Importamos el servicio que consulta canciones en Supabase
 import { CancionService } from './services/cancion.service';
@@ -12,7 +14,7 @@ import { CancionService } from './services/cancion.service';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RouterOutlet],
+  imports: [CommonModule, RouterOutlet, ToastComponent],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })

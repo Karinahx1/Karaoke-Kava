@@ -1,0 +1,163 @@
+<div class="combates-container">
+
+  @if (cargando()) {
+    <div class="loading-card">
+      <div class="spinner"></div>
+      <p class="loading-text">Cargando arena musical...</p>
+    </div>
+  } @else {
+
+    <!-- VISTA 1: Lista de combates y opciones -->
+    @if (vistaActual() === 'lista') {
+      <div class="combates-card">
+        <header class="combates-header">
+          <button class="btn-back" (click)="volverAlMenu()">← Volver</button>
+          <h1 class="title-gradient">⚔️ Combates 1v1</h1>
+          <p class="subtitle">Demuestra tu talento en la arena musical</p>
+        </header>
+
+        <section class="actions-section">
+          <!-- Buscar oponente automático -->
+          <button class="btn-primary" (click)="buscarOponenteAutomatico()">
+            <span>🎯</span> Buscar Oponente por Nivel
+          </button>
+
+          <div class="divider"><span>o</span></div>
+
+          <!-- Invitar usuario con autocompletado -->
+          <div class="invite-section">
+            <label class="invite-label">Invitar a un jugador</label>
+            <div class="invite-input-wrapper">
+              <div class="input-group">
+                <input
+                  type="text"
+                  [value]="busquedaInvitado"
+                  (input)="onBusquedaInput($event)"
+                  (blur)="cerrarDropdown()"
+                  placeholder="Escribe un nombre..."
+                  class="input-invite"
+                  autocomplete="off"
+                >
+                <button
+                  class="btn-invite"
+                  (click)="invitarJugador()"
+                  [disabled]="!usuarioSeleccionado()"
+                >
+                  Invitar ✉️
+                </button>
+              </div>
+
+              <!-- Dropdown de resultados -->
+              @if (mostrarDropdown() && resultadosBusqueda().length > 0) {
+                <div class="autocomplete-dropdown">
+                  @for (user of resultadosBusqueda(); track user.id) {
+                    <div class="autocomplete-item" (mousedown)="seleccionarUsuario(user)">
+                      <div class="user-avatar-small">
+                        {{ user.nombre.substring(0, 1).toUpperCase() }}
+                      </div>
+                      <div class="user-info-small">
+                        <span class="user-name">{{ user.nombre }} {{ user.apellido }}</span>
+                        @if (user.id_nivel) {
+                          <span class="user-level">Nivel {{ user.id_nivel }}</span>
+                        } @else {
+                          <span class="user-level sin-nivel">Sin nivel</span>
+                        }
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+
+              @if (usuarioSeleccionado()) {
+                <div class="selected-user-badge">
+                  ✅ Seleccionado: <strong>{{ usuarioSeleccionado().nombre }} {{ usuarioSeleccionado().apellido }}</strong>
+                </div>
+              }
+            </div>
+          </div>
+        </section>
+
+        <!-- Lista de combates -->
+        <section class="list-section">
+          <h2>Tus Combates</h2>
+          @if (misCombates().length === 0) {
+            <div class="empty-state">
+              <span>🥁</span>
+              <p>No tienes combates activos ni invitaciones pendientes.</p>
+            </div>
+          } @else {
+            <div class="combates-list">
+              @for (c of misCombates(); track c.id) {
+                <div class="combate-item">
+                  <div class="combate-info">
+                    <div class="combate-players">
+                      <span class="p-name p1-color">{{ c.jugador1?.nombre || '...' }}</span>
+                      <span class="mini-vs">vs</span>
+                      <span class="p-name p2-color">{{ c.jugador2?.nombre || 'Esperando...' }}</span>
+                    </div>
+                    <span class="combate-status badge-{{ c.id_estado }}">
+                      {{ c.id_estado === 1 ? '⏳ Pendiente' : c.id_estado === 2 ? '🔍 Buscando' : c.id_estado === 3 ? '⚔️ En Curso' : '🏆 Finalizado' }}
+                    </span>
+                  </div>
+
+                  <div class="combate-actions">
+                    @if (c.id_estado === 1 && c.id_usuario_jugador2 === usuario().id) {
+                      <button class="btn-success" (click)="aceptarInvitacion(c.id)">Aceptar</button>
+                    }
+                    @if (c.id_estado === 3) {
+                      <button class="btn-primary-small" (click)="entrarArena(c.id)">Entrar ⚔️</button>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </section>
+      </div>
+    }
+
+    <!-- VISTA 2: Buscando oponente -->
+    @if (vistaActual() === 'buscando') {
+      <div class="combates-card text-center">
+        <h2 class="title-gradient">Buscando Rival...</h2>
+        <div class="spinner big"></div>
+        <p class="text-muted">Buscando un contrincante de tu mismo nivel.<br>Esto puede tomar unos momentos.</p>
+        <button class="btn-secondary mt-4" (click)="vistaActual.set('lista')">Cancelar búsqueda</button>
+      </div>
+    }
+
+    <!-- VISTA 3: La Arena -->
+    @if (vistaActual() === 'arena') {
+      <div class="arena-card">
+        <header class="arena-header">
+          <button class="btn-back" (click)="vistaActual.set('lista')">← Salir</button>
+          <h2 class="title-gradient">⚔️ Arena Musical</h2>
+          <div class="versus">
+            <div class="fighter">
+              <div class="fighter-avatar p1-bg">
+                {{ combateActivo()?.jugador1?.nombre?.substring(0,1)?.toUpperCase() }}
+              </div>
+              <span class="p1-color">{{ combateActivo()?.jugador1?.nombre }}</span>
+            </div>
+            <span class="vs">VS</span>
+            <div class="fighter">
+              <div class="fighter-avatar p2-bg">
+                {{ combateActivo()?.jugador2?.nombre?.substring(0,1)?.toUpperCase() }}
+              </div>
+              <span class="p2-color">{{ combateActivo()?.jugador2?.nombre }}</span>
+            </div>
+          </div>
+        </header>
+
+        <div class="arena-content">
+          <div class="arena-placeholder">
+            <span>🎤</span>
+            <p>La arena de canto se activará en el siguiente paso de desarrollo.</p>
+            <p class="text-muted">Aquí irá la selección de canción y la grabación de cada ronda.</p>
+          </div>
+        </div>
+      </div>
+    }
+
+  }
+</div>

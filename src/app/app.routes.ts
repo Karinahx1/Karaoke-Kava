@@ -6,6 +6,7 @@ import { LoginPage } from './pages/login/login';
 import { RegistroPage } from './pages/registro/registro';
 import { AdminPage } from './pages/admin/admin';
 import { MenuPage } from './pages/menu/menu';
+import { CombatesPage } from './pages/combates/combates.page';
 import { authGuard } from './guards/auth.guard';
 
 export const routes: Routes = [
@@ -23,6 +24,11 @@ export const routes: Routes = [
   {
     path: 'auth/callback',
     component: MenuPage,
+    canActivate: [authGuard]
+  },
+  {
+    path: 'combates',
+    component: CombatesPage,
     canActivate: [authGuard]
   }
 ];

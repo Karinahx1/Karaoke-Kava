@@ -189,6 +189,10 @@ export class MenuPage implements OnInit {
     this.router.navigate(['/practica']);
   }
 
+  irCombates() {
+    this.router.navigate(['/combates']);
+  }
+
   irAdmin() {
     this.router.navigate(['/admin']);
   }

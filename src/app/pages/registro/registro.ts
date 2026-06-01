@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
+import { ToastService } from '../../services/toast.service';
 import { supabase } from '../../core/supabase.client';
 
 @Component({
@@ -24,7 +25,8 @@ export class RegistroPage {
 
   constructor(
     private router: Router,
-    private authService: AuthService
+    private authService: AuthService,
+    private toastService: ToastService
   ) {}
 
   async registrarse() {
@@ -33,7 +35,7 @@ export class RegistroPage {
 
       // Validar campos obligatorios
       if (!this.nombre.trim() || !this.apellido.trim() || !this.numDocumento.trim() || !this.email.trim()) {
-        alert('Por favor, completa todos los campos del formulario.');
+        this.toastService.warning('Por favor, completa todos los campos del formulario.');
         return;
       }
 
@@ -56,12 +58,13 @@ export class RegistroPage {
       if (errorBusqueda) {
         console.error('Error al verificar el correo:', errorBusqueda);
         this.cargando = false;
-        alert('Ocurrió un error al validar el correo. Intenta de nuevo.');
+        this.toastService.error('Ocurrió un error al validar el correo. Intenta de nuevo.');
         return;
       }
 
       if (usuarioExistente) {
         this.errorEmail = 'Este correo ya está registrado. Por favor, inicia sesión.';
+        this.toastService.error('Ya existe una cuenta asociada a este correo. Por favor, inicia sesión.');
         this.cargando = false;
         return;
       }
@@ -83,7 +86,7 @@ export class RegistroPage {
 
     } catch (error: any) {
       console.error('Error al iniciar el registro con Google:', error);
-      alert('Error al registrar: ' + error.message);
+      this.toastService.error('Error al registrar: ' + error.message);
       this.cargando = false;
     }
   }

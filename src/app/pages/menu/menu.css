@@ -241,6 +241,12 @@
   box-shadow: 0 12px 28px rgba(37, 99, 235, 0.15);
 }
 
+/* Especialización para el botón de Combates */
+.btn-combate:hover {
+  border-color: rgba(167, 139, 250, 0.6); /* Morado vibrante */
+  box-shadow: 0 12px 28px rgba(139, 92, 246, 0.25);
+}
+
 /* Footer y botón de cerrar sesión */
 .menu-footer {
   display: flex;
