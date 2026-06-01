@@ -8,7 +8,13 @@
 
     <h1>Crear cuenta</h1>
     <p class="descripcion">Completa tus datos y continúa con Google para empezar a cantar.</p>
-
+    @if (mensajeInfo) {
+      <div class="info-banner">
+        <span class="info-icon">ℹ️</span>
+        <span>{{ mensajeInfo }}</span>
+      </div>
+    }
+    
     <form (ngSubmit)="registrarse()">
 
       <div class="form-group">

@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
@@ -12,13 +12,14 @@ import { supabase } from '../../core/supabase.client';
   templateUrl: './registro.html',
   styleUrl: './registro.css'
 })
-export class RegistroPage {
+export class RegistroPage implements OnInit {
   nombre = '';
   apellido = '';
   email = '';
   numDocumento = '';
   cargando = false;
   errorEmail = '';
+  mensajeInfo = '';
 
   // Debe existir un registro con id = 1 en tbl_genero_persona.
   idGenero = 1;
@@ -28,6 +29,20 @@ export class RegistroPage {
     private authService: AuthService,
     private toastService: ToastService
   ) {}
+
+  ngOnInit() {
+    const motivo = localStorage.getItem('motivo_redireccion');
+    if (motivo === 'no_registrado') {
+      this.mensajeInfo = 'No encontramos una cuenta con este correo. Crea una para empezar a cantar 🎤';
+      const correo = localStorage.getItem('email_no_registrado');
+      if (correo) {
+        this.email = correo; // pre-llenamos el correo de Google
+      }
+    }
+    // Limpiamos para que el mensaje no reaparezca al recargar
+    localStorage.removeItem('motivo_redireccion');
+    localStorage.removeItem('email_no_registrado');
+  }
 
   async registrarse() {
     try {
@@ -79,6 +94,7 @@ export class RegistroPage {
       };
 
       localStorage.setItem('temp_registro_perfil', JSON.stringify(tempProfile));
+      localStorage.setItem('intencion_auth', 'registro');
       console.log('Datos de perfil guardados en localStorage:', tempProfile);
 
       // Redirigir al inicio de sesión con Google

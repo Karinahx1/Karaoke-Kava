@@ -104,6 +104,21 @@ export class MenuPage implements OnInit {
 
       // 3. Si no existe ningún registro, lo creamos (usando datos del registro híbrido o por defecto)
       if (!dbUser) {
+        const intencion = localStorage.getItem('intencion_auth');
+        localStorage.removeItem('intencion_auth');
+
+        // Si NO venía de registrarse, no creamos cuenta: lo bloqueamos
+        if (intencion !== 'registro') {
+          // Guardamos el motivo y el correo para explicárselo en la página de registro
+          localStorage.setItem('motivo_redireccion', 'no_registrado');
+          if (authUser.email) {
+            localStorage.setItem('email_no_registrado', authUser.email);
+          }
+          localStorage.removeItem('temp_registro_perfil');
+          await this.authService.cerrarSesion();
+          this.router.navigate(['/registro']);
+          return;
+        }
         let tempProfile: any = null;
         try {
           const stored = localStorage.getItem('temp_registro_perfil');

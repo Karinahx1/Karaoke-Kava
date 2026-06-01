@@ -20,6 +20,7 @@ export class LoginPage {
   async loginGoogle() {
     try {
       this.cargando = true;
+      localStorage.setItem('intencion_auth', 'login');
       await this.authService.loginConGoogle();
     } catch (error: any) {
       console.error('Error al iniciar sesión con Google:', error);
