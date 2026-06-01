@@ -18,6 +18,7 @@ export class MenuPage implements OnInit {
   nombreNivel = signal<string | null>(null);
   idRolUsuario = signal<number | null>(null);
   cargando = signal(true);
+  mostrarModalLogout = signal(false);
 
   constructor(
     private authService: AuthService,
@@ -193,24 +194,36 @@ export class MenuPage implements OnInit {
     this.router.navigate(['/combates']);
   }
 
+  irComunidad() {
+    this.router.navigate(['/comunidad']);
+  }
+
   irAdmin() {
     this.router.navigate(['/admin']);
   }
 
   /**
+   * Abre el modal de confirmación antes de cerrar sesión.
+   */
+  pedirConfirmacionLogout() {
+    this.mostrarModalLogout.set(true);
+  }
+
+  cancelarLogout() {
+    this.mostrarModalLogout.set(false);
+  }
+
+  /**
    * Cierra la sesión activa del usuario y limpia el estado local de Supabase
    */
-  async cerrarSesion() {
-    const confirmar = confirm('¿Seguro que deseas cerrar sesión?');
-    if (!confirmar) return;
-
+  async confirmarCerrarSesion() {
+    this.mostrarModalLogout.set(false);
     try {
       this.cargando.set(true);
       await this.authService.cerrarSesion();
       this.router.navigate(['/']);
     } catch (error) {
       console.error('Error al cerrar la sesión:', error);
-      alert('Ocurrió un error al intentar cerrar la sesión.');
       this.cargando.set(false);
     }
   }
