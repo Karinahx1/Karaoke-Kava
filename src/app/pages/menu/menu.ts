@@ -109,10 +109,15 @@ export class MenuPage implements OnInit {
 
         // Si NO venía de registrarse, no creamos cuenta: lo bloqueamos
         if (intencion !== 'registro') {
+          // Guardamos el motivo y el correo para explicárselo en la página de registro
+          localStorage.setItem('motivo_redireccion', 'no_registrado');
+          if (authUser.email) {
+            localStorage.setItem('email_no_registrado', authUser.email);
+          }
           localStorage.removeItem('temp_registro_perfil');
           await this.authService.cerrarSesion();
           this.router.navigate(['/registro']);
-          return; // detenemos aquí: usuario no registrado
+          return;
         }
         let tempProfile: any = null;
         try {

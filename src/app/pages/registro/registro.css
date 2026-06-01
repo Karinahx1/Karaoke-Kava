@@ -243,4 +243,20 @@ input.input-error {
 
 .cambio button:hover {
   color: #93c5fd;
-}
+}
+
+.info-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(124, 58, 237, 0.15);
+  border: 1px solid rgba(124, 58, 237, 0.45);
+  color: #ddd6fe;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  margin-bottom: 20px;
+  line-height: 1.4;
+}
+.info-icon { font-size: 1.1rem; flex-shrink: 0; }
