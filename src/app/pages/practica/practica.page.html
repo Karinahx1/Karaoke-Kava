@@ -48,6 +48,28 @@
       </iframe>
     </div>
 
+    <div class="efecto-estudio-toggle">
+      <label class="toggle-switch" [class.activo]="efectoEstudioActivo()">
+        <input
+          type="checkbox"
+          [checked]="efectoEstudioActivo()"
+          (change)="toggleEfectoEstudio()"
+          [disabled]="grabando()"
+        />
+        <span class="toggle-slider"></span>
+        <span class="toggle-label">
+          🎙️ Efecto Estudio (Eco)
+          <span class="toggle-estado">{{ efectoEstudioActivo() ? 'ON' : 'OFF' }}</span>
+        </span>
+      </label>
+    </div>
+
+    <!-- Osciloscopio Vocal en Vivo -->
+    <div class="visualizador-container" *ngIf="grabando()">
+      <canvas #visualizador class="visualizador-ondas" width="600" height="120"></canvas>
+      <div class="visualizador-label">🎙️ Grabando voz en vivo</div>
+    </div>
+
     <div class="botones-grabacion">
       <button
         class="btn-principal"
@@ -91,28 +113,7 @@
     </p>
   </section>
 
-  <section class="panel panel-resultado" *ngIf="practicaEvaluada()">
-    <h2>Resultado de la práctica</h2>
-
-    <div class="tarjeta-puntaje">
-      <span class="puntaje-label">Puntaje</span>
-      <span class="puntaje-valor">{{ practicaEvaluada()?.puntaje }}</span>
-    </div>
-
-    <div class="detalle-resultado">
-      <p>
-        <strong>Feedback:</strong> {{ practicaEvaluada()?.feedback }}
-      </p>
-
-      <p>
-        <strong>Transcripción:</strong> {{ practicaEvaluada()?.transcripcion }}
-      </p>
-
-      <p *ngIf="duracionAudio() > 0">
-        <strong>Duración del audio:</strong> {{ duracionAudio() }} segundos
-      </p>
-    </div>
-  </section>
+  <!-- El modal reemplaza a la sección inline -->
 
   <section class="panel panel-letra" *ngIf="cancionSeleccionada()?.letra">
     <h2>Letra</h2>
@@ -121,6 +122,71 @@
     </div>
   </section>
 
-  
+  <!-- OVERLAY DE CARGA -->
+  <div *ngIf="cargando()" class="overlay-carga">
+    <div class="animacion-mic">
+      <span class="icon-mic">🎤</span>
+      <div class="notas">
+        <span class="note note1">🎵</span>
+        <span class="note note2">🎶</span>
+        <span class="note note3">🎵</span>
+      </div>
+    </div>
+    <p class="texto-carga">{{ mensajeCarga() }}</p>
+  </div>
+
+  <!-- MODAL DE RESULTADOS -->
+  <div class="modal-fondo" *ngIf="mostrarModal()" (click)="mostrarModal.set(false)">
+    <div class="modal-contenido" (click)="$event.stopPropagation()">
+      <button class="cerrar-modal" (click)="mostrarModal.set(false)">✕</button>
+
+      <h2 class="modal-titulo">Resultado de la práctica</h2>
+
+      <!-- Resultado General -->
+      <section class="modal-resumen">
+        <div class="puntaje-global">
+          <span class="label">Puntaje Total</span>
+          <span class="valor">{{ practicaEvaluada()?.puntaje }}</span>
+        </div>
+        <div class="nivel">
+          <span class="label">Nivel</span>
+          <span class="valor">{{ getNivel(practicaEvaluada()?.puntaje) }}</span>
+        </div>
+      </section>
+
+      <!-- Feedback IA -->
+      <section class="modal-feedback">
+        <h3>🤖 El Juez Virtual dice</h3>
+        <p class="comentario">"{{ practicaEvaluada()?.feedback }}"</p>
+      </section>
+
+      <!-- Estadísticas -->
+      <section class="modal-estadisticas">
+        <h3>Estadísticas</h3>
+        <div class="stat">
+          <span class="icon">📖</span>
+          <span class="texto">Precisión de Letra</span>
+          <span class="valor">{{ practicaEvaluada()?.puntaje_letra }}/60</span>
+        </div>
+        <div class="stat">
+          <span class="icon">🗣️</span>
+          <span class="texto">Potencia Vocal</span>
+          <span class="valor">{{ practicaEvaluada()?.puntaje_voz }}/20</span>
+        </div>
+        <div class="stat">
+          <span class="icon">⏱️</span>
+          <span class="texto">Ritmo y Audio</span>
+          <span class="valor">{{ practicaEvaluada()?.puntaje_audio }}/20</span>
+        </div>
+      </section>
+
+      <!-- Acciones -->
+      <section class="modal-acciones">
+        <button class="btn-principal" (click)="volverAlMenu()">Volver al menú</button>
+        <button class="btn-secundario" (click)="reiniciarPractica()">Otra práctica</button>
+        <button class="btn-secundario" (click)="navegarEstadisticas()">Ver estadísticas</button>
+      </section>
+    </div>
+  </div>
 
 </div>

@@ -18,6 +18,7 @@ export class EvaluacionService {
     rmsPromedio: number;
     porcentajeSilencio: number;
     porcentajeActividad: number;
+    porcentajeClipping?: number;
   }) {
     const response: any = await firstValueFrom(
       this.http.post(this.apiUrl, data)

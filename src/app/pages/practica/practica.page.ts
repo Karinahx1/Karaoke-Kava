@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { Router } from '@angular/router';
@@ -57,6 +57,22 @@ export class PracticaPage implements OnInit {
   practicaCreada = signal<any | null>(null);
   practicaEvaluada = signal<any | null>(null);
   transcripcionVoz = signal<string>('');
+
+  /**
+   * Variables de UI para Mejora de Experiencia (Fase UX)
+   */
+  cargando = signal(false);
+  mensajeCarga = signal('');
+  mostrarModal = signal(false);
+  intervaloCarga: any;
+
+  /**
+   * Efecto de Estudio (Eco): OFF por defecto, el usuario lo activa.
+   */
+  efectoEstudioActivo = signal(false);
+  efxContext: AudioContext | null = null;
+  efxDestination: MediaStreamAudioDestinationNode | null = null;
+
   /**
  * Indica si la práctica ya fue iniciada.
  * La usamos para cargar el video con autoplay.
@@ -95,6 +111,7 @@ export class PracticaPage implements OnInit {
   muestrasAnalizadas = 0;
   muestrasConActividad = 0;
   muestrasEnSilencio = 0;
+  muestrasSaturadas = 0;
   sumaRms = 0;
 
   /**
@@ -103,6 +120,9 @@ export class PracticaPage implements OnInit {
   rmsPromedio = signal(0);
   porcentajeSilencio = signal(0);
   porcentajeActividad = signal(0);
+  porcentajeClipping = signal(0);
+
+  @ViewChild('visualizador') canvasRef?: ElementRef<HTMLCanvasElement>;
 
   /**
    * ID del usuario autenticado (se carga en ngOnInit)
@@ -287,13 +307,18 @@ export class PracticaPage implements OnInit {
     this.muestrasAnalizadas = 0;
     this.muestrasConActividad = 0;
     this.muestrasEnSilencio = 0;
+    this.muestrasSaturadas = 0;
     this.sumaRms = 0;
 
     this.rmsPromedio.set(0);
     this.porcentajeSilencio.set(0);
     this.porcentajeActividad.set(0);
+    this.porcentajeClipping.set(0);
 
     this.analisisActivo = true;
+
+    let canvasCtx: CanvasRenderingContext2D | null = null;
+    let canvas: HTMLCanvasElement | null = null;
 
     const analizar = () => {
       if (!this.analisisActivo) return;
@@ -301,8 +326,20 @@ export class PracticaPage implements OnInit {
       this.analyser.getFloatTimeDomainData(this.datosTiempo as any);
 
       let sumaCuadrados = 0;
+      let clippeoDetectado = false;
+
       for (let i = 0; i < this.datosTiempo.length; i++) {
-        sumaCuadrados += this.datosTiempo[i] * this.datosTiempo[i];
+        const val = this.datosTiempo[i];
+        sumaCuadrados += val * val;
+        
+        // Detección de gritos (saturación)
+        if (Math.abs(val) >= 0.99) {
+          clippeoDetectado = true;
+        }
+      }
+
+      if (clippeoDetectado) {
+        this.muestrasSaturadas++;
       }
 
       const rms = Math.sqrt(sumaCuadrados / this.datosTiempo.length);
@@ -316,10 +353,46 @@ export class PracticaPage implements OnInit {
         this.muestrasConActividad++;
       }
 
+      // ---- DIBUJAR OSCILOSCOPIO ----
+      if (this.canvasRef && this.canvasRef.nativeElement) {
+        canvas = this.canvasRef.nativeElement;
+        canvasCtx = canvas.getContext('2d');
+      }
+
+      if (canvasCtx && canvas) {
+        const w = canvas.width;
+        const h = canvas.height;
+
+        canvasCtx.fillStyle = 'rgba(2, 6, 23, 0.25)'; // trail effect
+        canvasCtx.fillRect(0, 0, w, h);
+        canvasCtx.lineWidth = 3;
+        canvasCtx.strokeStyle = clippeoDetectado ? '#ef4444' : '#a78bfa'; // Rojo si grita
+        canvasCtx.beginPath();
+
+        const sliceWidth = w / this.datosTiempo.length;
+        let x = 0;
+
+        for (let i = 0; i < this.datosTiempo.length; i++) {
+          const v = this.datosTiempo[i] * 0.5; // escalar la onda
+          const y = (v * h / 2) + (h / 2);
+
+          if (i === 0) canvasCtx.moveTo(x, y);
+          else canvasCtx.lineTo(x, y);
+
+          x += sliceWidth;
+        }
+        canvasCtx.lineTo(w, h / 2);
+        canvasCtx.stroke();
+      }
+      // -------------------------------
+
       this.animationFrameId = requestAnimationFrame(analizar);
     };
 
-    analizar();
+    // Pequeño timeout para dar tiempo a que el *ngIf monte el canvas
+    setTimeout(() => {
+      analizar();
+    }, 100);
   }
 
   /**
@@ -333,10 +406,12 @@ export class PracticaPage implements OnInit {
       const rms = this.sumaRms / this.muestrasAnalizadas;
       const silencio = (this.muestrasEnSilencio / this.muestrasAnalizadas) * 100;
       const actividad = (this.muestrasConActividad / this.muestrasAnalizadas) * 100;
+      const clipping = (this.muestrasSaturadas / this.muestrasAnalizadas) * 100;
 
       this.rmsPromedio.set(Number(rms.toFixed(4)));
       this.porcentajeSilencio.set(Number(silencio.toFixed(2)));
       this.porcentajeActividad.set(Number(actividad.toFixed(2)));
+      this.porcentajeClipping.set(Number(clipping.toFixed(2)));
     }
 
     if (this.audioContext) {
@@ -349,12 +424,48 @@ export class PracticaPage implements OnInit {
   }
 
   /**
+   * Activa o desactiva el efecto de estudio (eco).
+   */
+  toggleEfectoEstudio() {
+    this.efectoEstudioActivo.set(!this.efectoEstudioActivo());
+  }
+
+  /**
    * Inicia la grabación del micrófono y la transcripción.
+   * Si el efecto de estudio está activo, aplica eco/reverb en tiempo real.
    */
   async iniciarGrabacion() {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-    this.mediaRecorder = new MediaRecorder(stream);
+    let streamParaGrabar = stream;
+
+    // Si el efecto de estudio está activo, crear pipeline de eco
+    if (this.efectoEstudioActivo()) {
+      this.efxContext = new AudioContext();
+      const source = this.efxContext.createMediaStreamSource(stream);
+      this.efxDestination = this.efxContext.createMediaStreamDestination();
+
+      // Nodo de delay (eco de 150ms)
+      const delay = this.efxContext.createDelay(1.0);
+      delay.delayTime.value = 0.15;
+
+      // Nodo de ganancia para controlar la intensidad del eco (30%)
+      const feedbackGain = this.efxContext.createGain();
+      feedbackGain.gain.value = 0.3;
+
+      // Mezcla: voz original (dry) va directo al destino
+      source.connect(this.efxDestination);
+
+      // Eco: voz → delay → gain → destino, y feedback loop
+      source.connect(delay);
+      delay.connect(feedbackGain);
+      feedbackGain.connect(this.efxDestination);
+      feedbackGain.connect(delay); // feedback loop para eco natural
+
+      streamParaGrabar = this.efxDestination.stream;
+    }
+
+    this.mediaRecorder = new MediaRecorder(streamParaGrabar);
     this.audioChunks = [];
 
     // Reiniciar estados de una nueva práctica
@@ -368,6 +479,7 @@ export class PracticaPage implements OnInit {
     this.tiempoInicioGrabacion = Date.now();
 
     this.iniciarReconocimiento();
+    // Siempre usar el stream original del mic para análisis (sin eco)
     this.iniciarAnalisisAudio(stream);
 
     this.mediaRecorder.ondataavailable = (event) => {
@@ -385,6 +497,13 @@ export class PracticaPage implements OnInit {
         (tiempoFinGrabacion - this.tiempoInicioGrabacion) / 1000
       );
       this.duracionAudio.set(duracionSegundos);
+
+      // Limpiar contexto del efecto de estudio
+      if (this.efxContext) {
+        this.efxContext.close();
+        this.efxContext = null;
+        this.efxDestination = null;
+      }
 
       console.log('Audio grabado:', this.audioBlob());
       console.log('Duración del audio:', this.duracionAudio());
@@ -432,6 +551,9 @@ if (cancion) {
         return;
       }
 
+      // Activar pantalla de espera antes de subir y evaluar
+      this.iniciarPantallaEspera();
+
       const fileName = `practica-${Date.now()}.webm`;
 
       const file = new File([this.audioBlob()!], fileName, {
@@ -448,6 +570,31 @@ if (cancion) {
 
     } catch (error) {
       console.error('Error al subir el audio:', error);
+      this.detenerPantallaEspera();
+    }
+  }
+
+  iniciarPantallaEspera() {
+    this.cargando.set(true);
+    const mensajes = [
+      'Analizando afinación...',
+      'Evaluando pronunciación...',
+      'Calculando puntuación...',
+      'El jurado está deliberando...',
+      'Preparando resultados...'
+    ];
+    let idx = 0;
+    this.mensajeCarga.set(mensajes[0]);
+    this.intervaloCarga = setInterval(() => {
+      idx++;
+      this.mensajeCarga.set(mensajes[idx % mensajes.length]);
+    }, 1500);
+  }
+
+  detenerPantallaEspera() {
+    this.cargando.set(false);
+    if (this.intervaloCarga) {
+      clearInterval(this.intervaloCarga);
     }
   }
 
@@ -494,7 +641,8 @@ if (cancion) {
         duracionAudio: this.duracionAudio(),
         rmsPromedio: this.rmsPromedio(),
         porcentajeSilencio: this.porcentajeSilencio(),
-        porcentajeActividad: this.porcentajeActividad()
+        porcentajeActividad: this.porcentajeActividad(),
+        porcentajeClipping: this.porcentajeClipping()
       });
 
       const practicaActualizada =
@@ -502,6 +650,9 @@ if (cancion) {
           this.practicaCreada()!.id,
           {
             puntaje: resultadoEvaluacion.puntaje,
+            puntajeLetra: resultadoEvaluacion.puntajeLetra,
+            puntajeAudio: resultadoEvaluacion.puntajeAudio,
+            puntajeVoz: resultadoEvaluacion.puntajeVoz,
             feedback: resultadoEvaluacion.feedback,
             transcripcion: resultadoEvaluacion.transcripcion,
             id_estado: this.idEstadoPracticaFinalizada
@@ -511,8 +662,13 @@ if (cancion) {
       this.practicaEvaluada.set(practicaActualizada);
       console.log('Práctica evaluada correctamente:', practicaActualizada);
 
+      // Evaluación completada
+      this.detenerPantallaEspera();
+      this.mostrarModal.set(true);
+
     } catch (error) {
       console.error('Error al evaluar la práctica:', error);
+      this.detenerPantallaEspera();
     }
   }
 
@@ -549,4 +705,28 @@ async iniciarPracticaCompleta() {
 volverAlMenu() {
   this.router.navigate(['/auth/callback']);
 }
+
+reiniciarPractica() {
+  this.mostrarModal.set(false);
+  this.practicaEvaluada.set(null);
+  this.practicaCreada.set(null);
+  this.audioUrl.set(null);
+  this.audioBlob.set(null);
+  this.transcripcionVoz.set('');
+  this.practicaIniciada.set(false);
+}
+
+navegarEstadisticas() {
+  this.router.navigate(['/comunidad']); // Por ahora a comunidad o donde estén
+}
+
+getNivel(puntaje: number | undefined): string {
+  if (puntaje === undefined) return '-';
+  if (puntaje >= 90) return '🎤 Nivel Dios';
+  if (puntaje >= 75) return '⭐ Estrella';
+  if (puntaje >= 50) return '👍 Aficionado';
+  if (puntaje >= 30) return '😐 Principiante';
+  return '🙉 Necesitas más práctica';
+}
+
 }

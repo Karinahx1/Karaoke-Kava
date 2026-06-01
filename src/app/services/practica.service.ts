@@ -29,6 +29,9 @@ export class PracticaService {
     idPractica: number,
     data: {
       puntaje: number;
+      puntajeLetra?: number;
+      puntajeAudio?: number;
+      puntajeVoz?: number;
       feedback: string;
       transcripcion: string;
       id_estado: number;
