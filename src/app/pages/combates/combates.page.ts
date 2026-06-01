@@ -88,10 +88,33 @@ export class CombatesPage implements OnInit {
   }
 
   async buscarOponenteAutomatico() {
-    // Validar que el usuario tenga nivel
+    // Verificar si el usuario tiene prácticas completadas (y por tanto nivel asignado)
     if (!this.usuario()?.id_nivel) {
-      this.toastService.info('🎤 Debes completar al menos una práctica para obtener tu Rango Vocal antes de combatir.');
-      return;
+      // Consultar directamente si existen prácticas finalizadas del usuario
+      const { data: practicas } = await supabase
+        .from('tbl_practica')
+        .select('id')
+        .eq('id_usuario', this.usuario().id)
+        .eq('id_estado', 5)
+        .limit(1);
+
+      if (!practicas || practicas.length === 0) {
+        this.toastService.info('🎤 Debes completar al menos una práctica para obtener tu Rango Vocal antes de combatir.');
+        return;
+      }
+
+      // Tiene prácticas pero el nivel no se refleja aún — recargar usuario
+      const { data: usuarioActualizado } = await supabase
+        .from('tbl_usuario')
+        .select('*')
+        .eq('id', this.usuario().id)
+        .single();
+      if (usuarioActualizado) this.usuario.set(usuarioActualizado);
+
+      if (!this.usuario()?.id_nivel) {
+        this.toastService.info('🎤 Tu nivel está siendo calculado. Intenta de nuevo en un momento.');
+        return;
+      }
     }
 
     this.cargando.set(true);

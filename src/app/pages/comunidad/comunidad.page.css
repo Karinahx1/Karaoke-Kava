@@ -1,0 +1,345 @@
+:host {
+  display: block;
+  min-height: 100vh;
+  background: 
+    radial-gradient(circle at top right, rgba(234, 179, 8, 0.15), transparent 40%),
+    radial-gradient(circle at bottom left, rgba(124, 58, 237, 0.15), transparent 40%),
+    linear-gradient(135deg, #020617, #0f172a);
+  color: white;
+  font-family: 'Inter', Arial, sans-serif;
+}
+
+.comunidad-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+/* Header */
+.comunidad-header {
+  margin-bottom: 32px;
+}
+
+.header-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  text-align: center;
+}
+
+.btn-back {
+  position: absolute;
+  left: 0;
+  top: 0;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.2rem;
+  transition: all 0.2s ease;
+}
+
+.btn-back:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateX(-2px);
+}
+
+.header-content h1 {
+  font-size: 2.2rem;
+  margin: 0 0 8px 0;
+  font-weight: 800;
+  background: linear-gradient(90deg, #facc15, #fef08a);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.subtitle {
+  color: #94a3b8;
+  margin: 0;
+  font-size: 1rem;
+}
+
+/* Tabs Nav */
+.tabs-nav {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 12px;
+  margin-bottom: 24px;
+  scrollbar-width: thin;
+}
+
+.tabs-nav::-webkit-scrollbar {
+  height: 6px;
+}
+.tabs-nav::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: 4px;
+}
+
+.tabs-nav button {
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  color: #cbd5e1;
+  padding: 12px 20px;
+  border-radius: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.tabs-nav button:hover {
+  background: rgba(51, 65, 85, 0.8);
+}
+
+.tabs-nav button.active {
+  background: rgba(234, 179, 8, 0.15);
+  border-color: rgba(234, 179, 8, 0.5);
+  color: #fde047;
+  box-shadow: 0 4px 12px rgba(234, 179, 8, 0.1);
+}
+
+/* Content Area */
+.comunidad-content {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 24px;
+  padding: 32px;
+  min-height: 400px;
+  backdrop-filter: blur(12px);
+}
+
+/* Animations */
+.fade-in {
+  animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Loading / Error */
+.loading-state, .error-state, .empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 300px;
+  color: #94a3b8;
+  text-align: center;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(255,255,255,0.1);
+  border-top-color: #facc15;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Cards (Leaderboard & Songs) */
+.leaderboard-list, .songs-list, .feed-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.leaderboard-card, .song-card, .feed-card {
+  background: rgba(30, 41, 59, 0.4);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  border-radius: 16px;
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  transition: all 0.2s ease;
+}
+
+.leaderboard-card:hover {
+  background: rgba(30, 41, 59, 0.8);
+  border-color: rgba(148, 163, 184, 0.3);
+  transform: translateY(-2px);
+  cursor: pointer;
+}
+
+.rank, .song-rank {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #64748b;
+  min-width: 40px;
+}
+
+.rank.top-3 {
+  color: #facc15;
+  text-shadow: 0 0 10px rgba(234, 179, 8, 0.4);
+}
+
+.user-info, .song-details, .feed-content {
+  flex: 1;
+}
+
+.user-info h3, .song-details h3 {
+  margin: 0 0 6px 0;
+  font-size: 1.2rem;
+  color: white;
+}
+
+.song-details p, .feed-message {
+  margin: 0;
+  color: #cbd5e1;
+  font-size: 0.95rem;
+}
+
+.badge-nivel {
+  background: linear-gradient(135deg, #7c3aed, #3b82f6);
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.badge-nivel.large {
+  font-size: 1rem;
+  padding: 6px 16px;
+}
+
+.score-info {
+  text-align: right;
+}
+
+.score-label {
+  display: block;
+  font-size: 0.8rem;
+  color: #94a3b8;
+  margin-bottom: 4px;
+}
+
+.score-value {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #38bdf8;
+}
+
+/* Feed specific */
+.feed-icon {
+  font-size: 2rem;
+  background: rgba(255,255,255,0.05);
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+}
+
+.feed-date {
+  display: block;
+  font-size: 0.8rem;
+  color: #64748b;
+  margin-top: 6px;
+}
+
+/* Stats Profile */
+.profile-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 32px;
+  text-align: center;
+}
+
+.profile-header h2 {
+  font-size: 2rem;
+  margin: 0 0 12px 0;
+}
+
+.btn-challenge {
+  margin-top: 20px;
+  background: linear-gradient(135deg, #ef4444, #b91c1c);
+  color: white;
+  border: none;
+  padding: 12px 28px;
+  border-radius: 12px;
+  font-weight: bold;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 8px 20px rgba(239, 68, 68, 0.3);
+}
+
+.btn-challenge:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(239, 68, 68, 0.4);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.stat-card {
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  padding: 24px;
+  border-radius: 16px;
+  text-align: center;
+}
+
+.stat-value {
+  display: block;
+  font-size: 2.5rem;
+  font-weight: 900;
+  color: #facc15;
+  margin-bottom: 8px;
+}
+
+.stat-label {
+  color: #cbd5e1;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.btn-text-back {
+  background: none;
+  border: none;
+  color: #38bdf8;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 24px;
+}
+
+.btn-text-back:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 600px) {
+  .comunidad-content {
+    padding: 20px;
+  }
+  .leaderboard-card {
+    flex-direction: column;
+    text-align: center;
+    gap: 12px;
+  }
+  .score-info {
+    text-align: center;
+  }
+}

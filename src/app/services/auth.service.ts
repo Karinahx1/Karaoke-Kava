@@ -48,4 +48,17 @@ export class AuthService {
       throw error;
     }
   }
+
+  async obtenerPerfilUsuario(authUid: string) {
+    const { data, error } = await supabase
+      .from('tbl_usuario')
+      .select('*')
+      .eq('auth_uid', authUid)
+      .maybeSingle();
+      
+    if (error) {
+      throw error;
+    }
+    return data;
+  }
 }

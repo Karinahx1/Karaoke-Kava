@@ -1,0 +1,168 @@
+<div class="comunidad-container">
+  
+  <header class="comunidad-header">
+    <div class="header-content">
+      <button class="btn-back" (click)="volverAlMenu()" aria-label="Volver">
+        <span class="icon">⬅</span>
+      </button>
+      <h1>Comunidad 🏆</h1>
+      <p class="subtitle">Descubre, compite y conéctate con otros cantantes</p>
+    </div>
+  </header>
+
+  <nav class="tabs-nav">
+    <button [class.active]="activeTab() === 'leaderboard'" (click)="setTab('leaderboard')">Ranking</button>
+    <button [class.active]="activeTab() === 'feed'" (click)="setTab('feed')">Combates</button>
+    <button [class.active]="activeTab() === 'top-canciones'" (click)="setTab('top-canciones')">Top Canciones</button>
+    <button [class.active]="activeTab() === 'mi-perfil'" (click)="setTab('mi-perfil')">Mis Estadísticas</button>
+  </nav>
+
+  <main class="comunidad-content">
+    @if (cargando()) {
+      <div class="loading-state">
+        <div class="spinner"></div>
+        <p>Cargando información...</p>
+      </div>
+    } @else if (error()) {
+      <div class="error-state">
+        <p>No se pudo cargar la información. Si el servidor está apagado, por favor enciéndelo.</p>
+        <button class="btn-retry" (click)="setTab(activeTab() !== 'perfil-publico' ? activeTab() : 'leaderboard')">Reintentar conexión</button>
+      </div>
+    } @else {
+      
+      <!-- Pestaña: Leaderboard -->
+      @if (activeTab() === 'leaderboard') {
+        <section class="tab-section fade-in">
+          <h2>Top 10 Cantantes</h2>
+          <div class="leaderboard-list">
+            @for (user of leaderboard(); track user.id; let i = $index) {
+              <div class="leaderboard-card" (click)="verPerfilPublico(user.id)">
+                <div class="rank" [class.top-3]="i < 3">#{{ i + 1 }}</div>
+                <div class="user-info">
+                  <h3>{{ user.nombre }}</h3>
+                  <span class="badge-nivel">{{ user.nivel }}</span>
+                </div>
+                <div class="score-info">
+                  <span class="score-label">Promedio</span>
+                  <span class="score-value">{{ user.puntajePromedio }} pts</span>
+                </div>
+              </div>
+            } @empty {
+              <p class="empty-state">Aún no hay suficientes prácticas para mostrar el ranking.</p>
+            }
+          </div>
+        </section>
+      }
+
+      <!-- Pestaña: Feed -->
+      @if (activeTab() === 'feed') {
+        <section class="tab-section fade-in">
+          <h2>Actividad Reciente</h2>
+          <div class="feed-list">
+            @for (item of feed(); track item.id) {
+              <div class="feed-card">
+                <div class="feed-icon">
+                  {{ item.estado === 'FINALIZADO' ? '🏆' : '⚔️' }}
+                </div>
+                <div class="feed-content">
+                  <p class="feed-message">{{ item.mensaje }}</p>
+                  <span class="feed-date">{{ item.fecha | date:'short' }}</span>
+                </div>
+              </div>
+            } @empty {
+              <p class="empty-state">No hay actividad reciente de combates.</p>
+            }
+          </div>
+        </section>
+      }
+
+      <!-- Pestaña: Top Canciones -->
+      @if (activeTab() === 'top-canciones') {
+        <section class="tab-section fade-in">
+          <h2>Canciones Más Populares</h2>
+          <div class="songs-list">
+            @for (cancion of topCanciones(); track cancion.id; let i = $index) {
+              <div class="song-card">
+                <div class="song-rank">#{{ i + 1 }}</div>
+                <div class="song-details">
+                  <h3>{{ cancion.titulo }}</h3>
+                  <p>{{ cancion.artista }}</p>
+                </div>
+                <div class="song-stats">
+                  <span class="icon">🎤</span> {{ cancion.vecesCantada }} reproducciones
+                </div>
+              </div>
+            } @empty {
+              <p class="empty-state">No hay suficientes datos de canciones.</p>
+            }
+          </div>
+        </section>
+      }
+
+      <!-- Pestaña: Mi Perfil -->
+      @if (activeTab() === 'mi-perfil') {
+        <section class="tab-section fade-in">
+          @if (miPerfil()) {
+            <div class="profile-header">
+              <h2>{{ miPerfil()!.nombre }}</h2>
+              <span class="badge-nivel large">{{ miPerfil()!.nivel }}</span>
+            </div>
+            
+            <div class="stats-grid">
+              <div class="stat-card">
+                <span class="stat-value">{{ miPerfil()!.estadisticas.puntajePromedio }}</span>
+                <span class="stat-label">Puntaje Promedio</span>
+              </div>
+              <div class="stat-card">
+                <span class="stat-value">{{ miPerfil()!.estadisticas.mejorPuntaje }}</span>
+                <span class="stat-label">Mejor Puntaje</span>
+              </div>
+              <div class="stat-card">
+                <span class="stat-value">{{ miPerfil()!.estadisticas.totalPracticas }}</span>
+                <span class="stat-label">Prácticas Realizadas</span>
+              </div>
+              <div class="stat-card">
+                <span class="stat-value">{{ miPerfil()!.estadisticas.combatesGanados }}/{{ miPerfil()!.estadisticas.combatesJugados }}</span>
+                <span class="stat-label">Combates Ganados</span>
+              </div>
+            </div>
+          } @else {
+            <p class="empty-state">No pudimos cargar tu perfil.</p>
+          }
+        </section>
+      }
+
+      <!-- Pestaña: Perfil Público -->
+      @if (activeTab() === 'perfil-publico' && perfilPublico()) {
+        <section class="tab-section fade-in">
+          <button class="btn-text-back" (click)="setTab('leaderboard')">← Volver al Ranking</button>
+          
+          <div class="profile-header public">
+            <h2>{{ perfilPublico()!.nombre }}</h2>
+            <span class="badge-nivel large">{{ perfilPublico()!.nivel }}</span>
+            
+            <button class="btn-challenge" (click)="desafiarUsuario(perfilPublico()!.id)">
+              ⚔️ Desafiar
+            </button>
+          </div>
+          
+          <div class="stats-grid">
+            <div class="stat-card">
+              <span class="stat-value">{{ perfilPublico()!.estadisticas.puntajePromedio }}</span>
+              <span class="stat-label">Puntaje Promedio</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-value">{{ perfilPublico()!.estadisticas.totalPracticas }}</span>
+              <span class="stat-label">Prácticas Realizadas</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-value">{{ perfilPublico()!.estadisticas.combatesGanados }}</span>
+              <span class="stat-label">Victorias</span>
+            </div>
+          </div>
+        </section>
+      }
+
+    }
+  </main>
+</div>

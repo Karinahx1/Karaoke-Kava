@@ -162,6 +162,7 @@ export class PracticaPage implements OnInit {
       }
     } catch (error) {
       console.error('Error al inicializar la página de prácticas:', error);
+      alert('Error de conexión: No se pudo cargar el catálogo de canciones. Verifica que el servidor esté activo.');
       this.router.navigate(['/auth/callback']);
     }
   }
@@ -540,5 +541,12 @@ async iniciarPracticaCompleta() {
   }
 
   await this.iniciarGrabacion();
+}
+
+/**
+ * Vuelve al menú principal.
+ */
+volverAlMenu() {
+  this.router.navigate(['/auth/callback']);
 }
 }

@@ -19,6 +19,7 @@ export class AdminPage implements OnInit {
   vistaActual = signal<'crear' | 'listar'>('listar');
   editando = signal(false);
   modalAbierto = signal(false);
+  mostrarModalLogout = signal(false);
   idEditando = signal<number | null>(null);
 
   titulo = '';
@@ -160,11 +161,16 @@ export class AdminPage implements OnInit {
     this.urlAudio = '';
   }
 
-  async cerrarSesion() {
-    const confirmar = confirm('¿Seguro que deseas cerrar sesión?');
+  pedirConfirmacionLogout() {
+    this.mostrarModalLogout.set(true);
+  }
 
-    if (!confirmar) return;
+  cancelarLogout() {
+    this.mostrarModalLogout.set(false);
+  }
 
+  async confirmarCerrarSesion() {
+    this.mostrarModalLogout.set(false);
     const { error } = await supabase.auth.signOut();
 
     if (error) {

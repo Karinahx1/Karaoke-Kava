@@ -97,16 +97,48 @@
               </div>
             </button>
           }
+
+          <!-- Opción 4: Navegar a la Comunidad -->
+          @if (idRolUsuario() === 1) {
+            <button class="menu-btn btn-comunidad" (click)="irComunidad()" type="button">
+              <span class="btn-icon">🏆</span>
+              <div class="btn-text">
+                <h3>Comunidad</h3>
+                <p>Descubre a los mejores cantantes, mira las estadísticas y mantente al día con los últimos combates.</p>
+              </div>
+            </button>
+          }
         </div>
       </section>
 
       <!-- Pie de página del menú: Acción para Cerrar Sesión -->
       <footer class="menu-footer">
-        <button class="btn-logout" (click)="cerrarSesion()" type="button">
+        <button class="btn-logout" (click)="pedirConfirmacionLogout()" type="button">
           <span class="logout-icon">🚪</span> Cerrar sesión
         </button>
       </footer>
       
+    </div>
+  }
+
+  <!-- Modal de confirmación de cierre de sesión (Premium) -->
+  @if (mostrarModalLogout()) {
+    <div class="modal-backdrop">
+      <div class="modal-card">
+        <div class="modal-icon-container">
+          <span class="modal-icon">🎙️</span>
+        </div>
+        <h3 class="modal-title">¿Dejar el escenario?</h3>
+        <p class="modal-desc">¿Estás seguro que deseas cerrar sesión? Tus fans te extrañarán.</p>
+        <div class="modal-actions">
+          <button class="modal-btn btn-cancelar" (click)="cancelarLogout()" type="button">
+            Quedarme
+          </button>
+          <button class="modal-btn btn-confirmar" (click)="confirmarCerrarSesion()" type="button">
+            Cerrar sesión
+          </button>
+        </div>
+      </div>
     </div>
   }
 </div>

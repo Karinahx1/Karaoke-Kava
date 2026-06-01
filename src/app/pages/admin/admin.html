@@ -6,8 +6,8 @@
       <p>Gestiona las canciones disponibles en Karaoke Kava.</p>
     </div>
 
-    <button class="btn-logout" type="button" (click)="cerrarSesion()">
-      Cerrar sesión
+    <button class="btn-logout-header" type="button" (click)="pedirConfirmacionLogout()">
+      <span class="logout-icon">🚪</span> Cerrar sesión
     </button>
   </header>
 
@@ -225,5 +225,26 @@
 
     </div>
   </div>
+
+  <!-- Modal de confirmación de cierre de sesión (Premium) -->
+  @if (mostrarModalLogout()) {
+    <div class="modal-backdrop-logout">
+      <div class="modal-card-logout">
+        <div class="modal-icon-container">
+          <span class="modal-icon">🎙️</span>
+        </div>
+        <h3 class="modal-title">¿Dejar el escenario?</h3>
+        <p class="modal-desc">¿Estás seguro que deseas cerrar sesión? Tus fans te extrañarán.</p>
+        <div class="modal-actions-logout">
+          <button class="modal-btn btn-cancelar" (click)="cancelarLogout()" type="button">
+            Quedarme
+          </button>
+          <button class="modal-btn btn-confirmar" (click)="confirmarCerrarSesion()" type="button">
+            Cerrar sesión
+          </button>
+        </div>
+      </div>
+    </div>
+  }
 
 </div>
