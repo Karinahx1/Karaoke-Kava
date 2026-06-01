@@ -79,6 +79,7 @@ export class RegistroPage {
       };
 
       localStorage.setItem('temp_registro_perfil', JSON.stringify(tempProfile));
+      localStorage.setItem('intencion_auth', 'registro');
       console.log('Datos de perfil guardados en localStorage:', tempProfile);
 
       // Redirigir al inicio de sesión con Google
