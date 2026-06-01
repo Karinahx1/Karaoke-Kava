@@ -230,12 +230,14 @@ export class PracticaPage implements OnInit {
       return;
     }
 
-    this.recognition = new SR();
-    this.recognition.lang = 'es-ES';
-    this.recognition.continuous = true;
-    this.recognition.interimResults = true;
+    // Build the instance locally so the onend closure references this exact object,
+    // not whatever this.recognition points to when the event fires later.
+    const rec = new SR();
+    rec.lang = 'es-ES';
+    rec.continuous = true;
+    rec.interimResults = true;
 
-    this.recognition.onresult = (event: any) => {
+    rec.onresult = (event: any) => {
       let textoFinal = this.transcripcionVoz();
       let textoInterim = '';
 
@@ -253,19 +255,37 @@ export class PracticaPage implements OnInit {
       console.log('Transcripción parcial/real:', this.transcripcionVoz());
     };
 
-    this.recognition.onerror = (event: any) => {
+    rec.onerror = (event: any) => {
+      // 'no-speech' and 'aborted' fire regularly during silence — not real errors
+      if (event.error === 'no-speech' || event.error === 'aborted') return;
       console.warn('Error en reconocimiento de voz:', event.error);
     };
 
-    this.recognition.start();
+    // Browsers (especially Chrome) stop continuous recognition after silence.
+    // Restart automatically as long as the practice is still running.
+    rec.onend = () => {
+      if (this.grabando()) {
+        try { rec.start(); } catch { /* already starting, ignore */ }
+      }
+    };
+
+    rec.start();
+    this.recognition = rec;
   }
 
   /**
    * Detiene reconocimiento de voz.
+   * Los handlers se anulan ANTES de llamar a stop() para que onend no
+   * intente reiniciar la instancia y no queden callbacks activos que
+   * contaminen la siguiente sesión.
    */
   detenerReconocimiento() {
     if (this.recognition) {
+      this.recognition.onresult = null;
+      this.recognition.onerror = null;
+      this.recognition.onend = null;
       this.recognition.stop();
+      this.recognition = null;
       this.transcripcionInterim.set('');
     }
   }
@@ -639,16 +659,47 @@ export class PracticaPage implements OnInit {
    * Si el backend no está disponible, calcula el resultado localmente.
    */
   private async calcularYEnviarPuntajeFinal() {
-    const letra = this.cancionSeleccionada()?.letra ?? '';
+    const cancion = this.cancionSeleccionada();
+    const letra = cancion?.letra ?? '';
     const transcripcion = this.transcripcionVoz();
 
+    // ── Pitch score: quality × √coverage ────────────────────────────────────
+    // quality  = what % of frames where the user was singing had a clear pitch
+    // coverage = what fraction of the total song duration was recorded (0–1)
+    //
+    // √coverage gives a gentler curve than raw coverage so rookies are not
+    // unfairly penalised for short sessions:
+    //   25 % of song → √0.25 = 0.50 multiplier  (raw would be 0.25)
+    //   50 % of song → √0.50 ≈ 0.71 multiplier  (raw would be 0.50)
+    //  100 % of song → √1.00 = 1.00 multiplier  (same either way)
+    const pitchQuality = this.framesConAudio > 0
+      ? (this.framesConPitch / this.framesConAudio) * 100
+      : 0;
+
+    const duracionEsperada = cancion?.duracion ?? 0;
+    const coverage = duracionEsperada > 0
+      ? Math.min(this.duracionAudio() / duracionEsperada, 1)
+      : 1;
+
+    const pitchScoreFinal = Math.min(
+      Math.round(pitchQuality * Math.sqrt(coverage)),
+      100
+    );
+
+    // Overwrite the signal so the result panel shows the normalised value
+    this.puntajePitch.set(pitchScoreFinal);
+
+    // ── Lyrics score ────────────────────────────────────────────────────────
+    // Levenshtein against the full letra already penalises short performances:
+    // singing 20 s of a 4-min song means a very small transcript vs. the full
+    // text, so the edit distance is large and the score is proportionally low.
     const lyricsScore = this.scoreService.calcularPuntajeLetra(transcripcion, letra);
     this.puntajeLetra.set(lyricsScore);
 
     const resultado = await this.scoreService.finalizarPuntaje({
       songId: this.idCancionPrueba,
       userId: this.idUsuarioPrueba,
-      finalPitchScore: this.puntajePitch(),
+      finalPitchScore: pitchScoreFinal,
       finalLyricsScore: lyricsScore
     });
 
@@ -657,10 +708,10 @@ export class PracticaPage implements OnInit {
     } else {
       // Fallback local si el backend no está disponible
       const finalScore =
-        Math.round((this.puntajePitch() * 0.6 + lyricsScore * 0.4) * 100) / 100;
+        Math.round((pitchScoreFinal * 0.6 + lyricsScore * 0.4) * 100) / 100;
       this.resultadoFinal.set({
         finalScore,
-        pitchScore: this.puntajePitch(),
+        pitchScore: pitchScoreFinal,
         lyricsScore,
         label: this.scoreService.calcularEtiqueta(finalScore)
       });

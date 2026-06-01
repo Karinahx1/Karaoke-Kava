@@ -63,28 +63,28 @@ describe('ScoreService', () => {
   });
 
   describe('calcularEtiqueta', () => {
-    it('retorna "Perfect!" para puntaje >= 90', () => {
-      expect(service.calcularEtiqueta(90)).toBe('Perfect!');
+    it('retorna "Perfect!" para puntaje >= 75', () => {
+      expect(service.calcularEtiqueta(75)).toBe('Perfect!');
       expect(service.calcularEtiqueta(100)).toBe('Perfect!');
-      expect(service.calcularEtiqueta(95)).toBe('Perfect!');
+      expect(service.calcularEtiqueta(90)).toBe('Perfect!');
     });
 
-    it('retorna "Great!" para puntaje entre 70 y 89', () => {
-      expect(service.calcularEtiqueta(70)).toBe('Great!');
-      expect(service.calcularEtiqueta(89)).toBe('Great!');
-      expect(service.calcularEtiqueta(80)).toBe('Great!');
+    it('retorna "Great!" para puntaje entre 55 y 74', () => {
+      expect(service.calcularEtiqueta(55)).toBe('Great!');
+      expect(service.calcularEtiqueta(74)).toBe('Great!');
+      expect(service.calcularEtiqueta(65)).toBe('Great!');
     });
 
-    it('retorna "Good" para puntaje entre 50 y 69', () => {
-      expect(service.calcularEtiqueta(50)).toBe('Good');
-      expect(service.calcularEtiqueta(69)).toBe('Good');
-      expect(service.calcularEtiqueta(60)).toBe('Good');
+    it('retorna "Good" para puntaje entre 35 y 54', () => {
+      expect(service.calcularEtiqueta(35)).toBe('Good');
+      expect(service.calcularEtiqueta(54)).toBe('Good');
+      expect(service.calcularEtiqueta(45)).toBe('Good');
     });
 
-    it('retorna "Keep practicing" para puntaje menor a 50', () => {
-      expect(service.calcularEtiqueta(49)).toBe('Keep practicing');
+    it('retorna "Keep practicing" para puntaje menor a 35', () => {
+      expect(service.calcularEtiqueta(34)).toBe('Keep practicing');
       expect(service.calcularEtiqueta(0)).toBe('Keep practicing');
-      expect(service.calcularEtiqueta(25)).toBe('Keep practicing');
+      expect(service.calcularEtiqueta(20)).toBe('Keep practicing');
     });
   });
 });
