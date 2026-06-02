@@ -12,6 +12,7 @@ import { supabase } from '../../core/supabase.client';
 
 // API de reconocimiento de voz del navegador
 declare var webkitSpeechRecognition: any;
+declare var SpeechRecognition: any;
 
 @Component({
   selector: 'app-practica',
@@ -42,6 +43,19 @@ export class PracticaPage implements OnInit {
    * Reconocimiento de voz del navegador
    */
   recognition: any;
+
+  /**
+   * Controla si el reconocimiento debe reiniciarse cuando se detiene solo.
+   * Se pone en false al llamar detenerReconocimiento() para evitar reinicios.
+   */
+  private recognitionActiva = false;
+
+  /**
+   * Promesa que se resuelve cuando recognition.onend dispara tras detenerlo.
+   * mediaRecorder.onstop la espera para asegurar que los últimos resultados
+   * de voz ya fueron procesados antes de enviar la transcripción al backend.
+   */
+  private reconocimientoTerminado: Promise<void> = Promise.resolve();
 
   /**
    * Fragmentos del audio grabado
@@ -251,43 +265,82 @@ export class PracticaPage implements OnInit {
 
   /**
    * Inicia reconocimiento de voz.
+   * Detecta el idioma de la canción y reinicia automáticamente si el navegador
+   * detiene el reconocimiento por silencio (comportamiento habitual en Chrome).
    */
   iniciarReconocimiento() {
-    this.recognition = new webkitSpeechRecognition();
+    const SR =
+      (typeof SpeechRecognition !== 'undefined' && SpeechRecognition) ||
+      (typeof webkitSpeechRecognition !== 'undefined' && webkitSpeechRecognition);
+
+    if (!SR) {
+      console.warn('Web Speech API no disponible en este navegador.');
+      return;
+    }
 
     const letraActual = this.cancionSeleccionada()?.letra?.toLowerCase() || '';
     const palabrasIngles = [' the ', ' you ', ' and ', ' to ', ' i '];
     const esIngles = palabrasIngles.some(palabra => letraActual.includes(palabra));
 
-    this.recognition.lang = esIngles ? 'en-US' : 'es-ES';
-    this.recognition.continuous = true;
-    this.recognition.interimResults = false;
+    const rec = new SR();
+    rec.lang = esIngles ? 'en-US' : 'es-ES';
+    rec.continuous = true;
+    rec.interimResults = false;
 
-    this.recognition.onresult = (event: any) => {
+    rec.onresult = (event: any) => {
       let textoAcumulado = this.transcripcionVoz();
-
       for (let i = event.resultIndex; i < event.results.length; i++) {
         textoAcumulado += ' ' + event.results[i][0].transcript;
       }
-
       this.transcripcionVoz.set(textoAcumulado.trim());
       console.log('Transcripción parcial/real:', this.transcripcionVoz());
     };
 
-    this.recognition.onerror = (event: any) => {
+    rec.onerror = (event: any) => {
+      // 'no-speech' y 'aborted' son normales durante silencios — no son errores reales
+      if (event.error === 'no-speech' || event.error === 'aborted') return;
       console.warn('Error en reconocimiento de voz:', event.error);
     };
 
-    this.recognition.start();
+    rec.onend = () => {
+      if (this.recognitionActiva) {
+        // El navegador detuvo el reconocimiento durante la grabación (ej. silencio largo).
+        // Se reinicia para no perder el resto de la letra.
+        try { rec.start(); } catch { /* ya iniciando, ignorar */ }
+      }
+      // Si recognitionActiva === false, detenerReconocimiento() ya reemplazó
+      // este handler con el resolver de la Promise — no hacer nada aquí.
+    };
+
+    this.recognitionActiva = true;
+    rec.start();
+    this.recognition = rec;
   }
 
   /**
-   * Detiene reconocimiento de voz.
+   * Detiene el reconocimiento de voz y devuelve una Promesa que se resuelve
+   * cuando recognition.onend dispara. Esto garantiza que cualquier resultado
+   * final pendiente (onresult) ya fue procesado antes de continuar.
    */
   detenerReconocimiento() {
-    if (this.recognition) {
-      this.recognition.stop();
+    this.recognitionActiva = false;
+
+    if (!this.recognition) {
+      this.reconocimientoTerminado = Promise.resolve();
+      return;
     }
+
+    const rec = this.recognition;
+    this.recognition = null;
+
+    this.reconocimientoTerminado = new Promise<void>((resolve) => {
+      // Reemplazar onend con el resolver. onresult sigue activo para capturar
+      // cualquier resultado final que el navegador todavía esté procesando.
+      rec.onend = () => resolve();
+      // Fallback: si onend nunca dispara en 800 ms, continuar igual
+      setTimeout(resolve, 800);
+      try { rec.stop(); } catch { resolve(); }
+    });
   }
 
   /**
@@ -479,6 +532,7 @@ export class PracticaPage implements OnInit {
     this.audioUrl.set(null);
     this.practicaCreada.set(null);
     this.practicaEvaluada.set(null);
+    this.reconocimientoTerminado = Promise.resolve();
 
     this.tiempoInicioGrabacion = Date.now();
 
@@ -511,6 +565,11 @@ export class PracticaPage implements OnInit {
 
       console.log('Audio grabado:', this.audioBlob());
       console.log('Duración del audio:', this.duracionAudio());
+
+      // Esperar a que recognition.onend haya disparado y entregado todos los
+      // resultados finales pendientes antes de leer transcripcionVoz().
+      await this.reconocimientoTerminado;
+
       console.log('Transcripción capturada:', this.transcripcionVoz());
 
       await this.subirAudioGrabado();
