@@ -120,15 +120,15 @@
                       <span class="p-name p2-color">{{ c.jugador2?.nombre || 'Esperando...' }}</span>
                     </div>
                     <span class="combate-status badge-{{ c.id_estado }}">
-                      {{ c.id_estado === 1 ? '⏳ Pendiente' : c.id_estado === 2 ? '🔍 Buscando' : c.id_estado === 3 ? '⚔️ En Curso' : '🏆 Finalizado' }}
+                      {{ c.id_estado === ESTADO_COMBATE.PENDIENTE ? '⏳ Pendiente' : c.id_estado === ESTADO_COMBATE.EN_CURSO ? '⚔️ En Curso' : c.id_estado === ESTADO_COMBATE.FINALIZADO ? '🏆 Finalizado' : 'Desconocido' }}
                     </span>
                   </div>
 
                   <div class="combate-actions">
-                    @if (c.id_estado === 3) {
+                    @if (c.id_estado === ESTADO_COMBATE.EN_CURSO) {
                       <button class="btn-primary-small" (click)="entrarArena(c.id)">Entrar ⚔️</button>
                     }
-                    @if (c.id_estado === 4) {
+                    @if (c.id_estado === ESTADO_COMBATE.FINALIZADO) {
                       <span class="badge-resultado">
                         {{ c.id_usuario_ganador == usuario().id ? '🏆 Ganaste' : '😔 Perdiste' }}
                       </span>

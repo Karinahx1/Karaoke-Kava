@@ -3,6 +3,7 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { StorageService } from '../../services/storage.service';
 import { EvaluacionService } from '../../services/evaluacion.service';
 import { CancionService } from '../../services/cancion.service';
+import { ESTADO_COMBATE, ESTADO_RONDA } from '../../constants/estados';
 
 declare var webkitSpeechRecognition: any;
 
@@ -25,7 +26,10 @@ import { environment } from '../../../environments/environment';
   styleUrl: './combates.page.css'
 })
 export class CombatesPage implements OnInit, OnDestroy {
-  
+  // Constantes de estados disponibles para el template
+  ESTADO_COMBATE = ESTADO_COMBATE;
+  ESTADO_RONDA = ESTADO_RONDA;
+
   // === VARIABLES ARENA ===
   intervaloPolling: any;
   rondaActiva = signal<any>(null);
@@ -155,13 +159,13 @@ export class CombatesPage implements OnInit, OnDestroy {
         
         // Separar invitaciones pendientes donde el usuario actual es el jugador2 invitado
         const misInvitaciones = todos.filter(
-          (c: any) => c.id_estado === 1 && c.id_usuario_jugador2 == this.usuario().id
+          (c: any) => c.id_estado === ESTADO_COMBATE.PENDIENTE && c.id_usuario_jugador2 == this.usuario().id
         );
         this.invitacionesPendientes.set(misInvitaciones);
 
         // El resto de combates va a misCombates
         const mios = todos.filter(
-          (c: any) => !(c.id_estado === 1 && c.id_usuario_jugador2 == this.usuario().id)
+          (c: any) => !(c.id_estado === ESTADO_COMBATE.PENDIENTE && c.id_usuario_jugador2 == this.usuario().id)
         );
         this.misCombates.set(mios);
       } else {
@@ -214,7 +218,7 @@ export class CombatesPage implements OnInit, OnDestroy {
           if (this.intervaloPollingBusqueda) clearInterval(this.intervaloPollingBusqueda);
           this.intervaloPollingBusqueda = setInterval(async () => {
             const detRes = await this.combateService.obtenerDetalleCombate(this.combateActivo().id);
-            if (detRes.ok && detRes.data?.id_estado === 3) {
+            if (detRes.ok && detRes.data?.id_estado === ESTADO_COMBATE.EN_CURSO) {
               clearInterval(this.intervaloPollingBusqueda);
               this.toastService.success('¡Se encontró un rival! Entrando a la arena...');
               await this.entrarArena(detRes.data.id);
@@ -407,7 +411,7 @@ export class CombatesPage implements OnInit, OnDestroy {
     }
 
     // Segundo: si todas las rondas ya se mostraron y el combate terminó → victoria final
-    if (combate.id_estado === 4) {
+    if (combate.id_estado === ESTADO_COMBATE.FINALIZADO) {
       if (this.intervaloPolling) clearInterval(this.intervaloPolling);
       this.vistaActual.set('victoria_final');
       return;
@@ -416,10 +420,10 @@ export class CombatesPage implements OnInit, OnDestroy {
     // Si llegamos aquí, mostramos la arena normal
     this.vistaActual.set('arena');
 
-    // Buscar SOLO rondas en estado pendiente (id_estado === 1)
+    // Buscar SOLO rondas en estado pendiente
     // Si no hay ninguna, rondaActiva es null → el HTML mostrará
     // el selector de canción para la siguiente ronda o «esperando».
-    const rondaActual = rondas.find((r: any) => r.id_estado === 1) ?? null;
+    const rondaActual = rondas.find((r: any) => r.id_estado === ESTADO_RONDA.PENDIENTE) ?? null;
 
     this.rondaActiva.set(rondaActual);
 
