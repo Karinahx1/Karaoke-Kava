@@ -41,6 +41,9 @@ export class CombatesPage implements OnInit, OnDestroy {
   duracionAudio = signal(0);
   mediaRecorder!: MediaRecorder;
   recognition: any;
+  private recognitionActiva = false;
+  private reconocimientoTerminado: Promise<void> = Promise.resolve();
+  private mimeTypeGrabacion = 'audio/webm';
   audioChunks: Blob[] = [];
   grabando = signal(false);
   transcripcionVoz = signal<string>('');
@@ -167,6 +170,25 @@ export class CombatesPage implements OnInit, OnDestroy {
     } catch (err) {
       console.error('Error cargando combates', err);
       this.toastService.error('Error de conexión al cargar combates.');
+    }
+  }
+
+  async cancelarBusqueda() {
+    const combate = this.combateActivo();
+    if (!combate) {
+      this.vistaActual.set('lista');
+      return;
+    }
+    this.cargando.set(true);
+    try {
+      await this.combateService.cancelarBusqueda(combate.id);
+    } catch (err) {
+      console.error('Error al cancelar búsqueda', err);
+    } finally {
+      if (this.intervaloPollingBusqueda) clearInterval(this.intervaloPollingBusqueda);
+      this.combateActivo.set(null);
+      this.cargando.set(false);
+      this.vistaActual.set('lista');
     }
   }
 
@@ -399,8 +421,8 @@ export class CombatesPage implements OnInit, OnDestroy {
 
     // Configurar video SOLO si la ronda activa tiene canción asignada
     if (rondaActual?.cancion?.url_audio) {
-      // Usamos la URL fija (sin autoplay dependiente de estado) para evitar reinicios
-      const urlEmbed = this.convertirYoutubeAEmbed(rondaActual.cancion.url_audio);
+      // Cargamos el video SIN autoplay: el usuario lo verá en pausa hasta que pulse "Iniciar mi turno"
+      const urlEmbed = this.convertirYoutubeAEmbed(rondaActual.cancion.url_audio, false);
       if (urlEmbed && !this.videoUrl()) {
         // Solo setear si no hay una URL ya cargada (evita reiniciar el iframe)
         this.videoUrl.set(this.sanitizer.bypassSecurityTrustResourceUrl(urlEmbed));
@@ -439,11 +461,9 @@ export class CombatesPage implements OnInit, OnDestroy {
     await this.actualizarArena();
   }
 
-  convertirYoutubeAEmbed(url: string): string | null {
-    // URL fija con autoplay y mute para que no cambie según el estado de grabación
-    // Si cambiara, el iframe se destruiría y recrearía, reiniciando el video.
-    const params = '?autoplay=1&mute=0&rel=0&enablejsapi=0';
+  convertirYoutubeAEmbed(url: string, autoplay = false): string | null {
     if (!url) return null;
+    const params = autoplay ? '?autoplay=1&rel=0' : '?autoplay=0&rel=0';
     if (url.includes('youtube.com/embed/')) {
       return url.split('?')[0] + params;
     }
@@ -486,34 +506,67 @@ export class CombatesPage implements OnInit, OnDestroy {
   // === PIPELINE DE AUDIO ===
 
   iniciarReconocimiento() {
-    // Compatibilidad Chrome + Edge (webkit prefix opcional)
-    const SpeechRecognitionAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognitionAPI) {
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) {
       console.warn('SpeechRecognition no disponible en este navegador.');
       return;
     }
-    this.recognition = new SpeechRecognitionAPI();
+
     const letraActual = this.cancionSeleccionada()?.letra?.toLowerCase() || '';
     const palabrasIngles = [' the ', ' you ', ' and ', ' to ', ' i '];
     const esIngles = palabrasIngles.some(p => letraActual.includes(p));
-    this.recognition.lang = esIngles ? 'en-US' : 'es-ES';
-    this.recognition.continuous = true;
-    this.recognition.interimResults = false;
-    this.recognition.onresult = (event: any) => {
+
+    const rec = new SR();
+    rec.lang = esIngles ? 'en-US' : 'es-ES';
+    rec.continuous = true;
+    rec.interimResults = false;
+
+    rec.onresult = (event: any) => {
       let texto = this.transcripcionVoz();
       for (let i = event.resultIndex; i < event.results.length; i++) {
         texto += ' ' + event.results[i][0].transcript;
       }
       this.transcripcionVoz.set(texto.trim());
     };
-    this.recognition.onerror = (event: any) => console.warn('Speech error:', event.error);
-    try { this.recognition.start(); } catch(e) { console.warn('No se pudo iniciar reconocimiento de voz', e); }
+
+    rec.onerror = (event: any) => {
+      if (event.error === 'no-speech' || event.error === 'aborted') return;
+      if (event.error === 'audio-capture') {
+        console.error('SpeechRecognition: micrófono en uso por otra API. Transcripción no disponible.');
+        return;
+      }
+      console.warn('Error en reconocimiento de voz:', event.error);
+    };
+
+    rec.onend = () => {
+      if (this.recognitionActiva && !this.esMobile()) {
+        try { rec.start(); } catch { /* ya iniciando */ }
+      }
+    };
+
+    this.recognitionActiva = true;
+    rec.start();
+    this.recognition = rec;
   }
 
   detenerReconocimiento() {
-    if (this.recognition) {
-      try { this.recognition.stop(); } catch (e) {}
+    this.recognitionActiva = false;
+
+    if (!this.recognition) {
+      this.reconocimientoTerminado = Promise.resolve();
+      return;
     }
+
+    const rec = this.recognition;
+    this.recognition = null;
+
+    // Devuelve una Promise que se resuelve cuando recognition.onend dispara,
+    // garantizando que el último onresult ya fue procesado antes de leer transcripcionVoz()
+    this.reconocimientoTerminado = new Promise<void>((resolve) => {
+      rec.onend = () => resolve();
+      setTimeout(resolve, 800); // fallback por si onend nunca llega
+      try { rec.stop(); } catch { resolve(); }
+    });
   }
 
   analisisActivo = false;
@@ -543,36 +596,63 @@ export class CombatesPage implements OnInit, OnDestroy {
     this.sumaRms = 0;
     this.transcripcionVoz.set('');
     this.audioChunks = [];
+    this.reconocimientoTerminado = Promise.resolve();
 
-    navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } })
+    const audioConstraints: MediaTrackConstraints | boolean = this.esMobile()
+      ? { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+      : { echoCancellation: true, noiseSuppression: true };
+
+    navigator.mediaDevices.getUserMedia({ audio: audioConstraints })
       .then(stream => {
-        this.audioContext = new AudioContext();
-        this.analyser = this.audioContext.createAnalyser();
-        this.analyser.fftSize = 2048;
-        this.datosTiempo = new Float32Array(this.analyser.fftSize);
+        // Detectar MIME type real soportado
+        const candidatos = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4'];
+        this.mimeTypeGrabacion = candidatos.find(t => MediaRecorder.isTypeSupported(t)) ?? 'audio/webm';
 
-        this.sourceNode = this.audioContext.createMediaStreamSource(stream);
-        this.sourceNode.connect(this.analyser);
+        if (!this.esMobile()) {
+          this.audioContext = new AudioContext();
+          this.analyser = this.audioContext.createAnalyser();
+          this.analyser.fftSize = 2048;
+          this.datosTiempo = new Float32Array(this.analyser.fftSize);
+          this.sourceNode = this.audioContext.createMediaStreamSource(stream);
+          this.sourceNode.connect(this.analyser);
+        }
 
-        this.mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+        this.mediaRecorder = new MediaRecorder(stream, { mimeType: this.mimeTypeGrabacion });
         this.mediaRecorder.ondataavailable = (e: BlobEvent) => {
           if (e.data.size > 0) this.audioChunks.push(e.data);
         };
+
+        // Cuando el MediaRecorder termina, esperar al reconocimiento y luego evaluar
+        this.mediaRecorder.onstop = async () => {
+          const finalBlob = new Blob(this.audioChunks, { type: this.mimeTypeGrabacion });
+
+          if (this.esMobile()) {
+            await this.analizarAudioOffline(finalBlob);
+          }
+
+          // Esperar a que recognition.onend haya disparado y entregado resultados finales
+          await this.reconocimientoTerminado;
+
+          await this.procesarTurnoArena(finalBlob);
+        };
+
         this.mediaRecorder.start(1000);
 
         this.grabando.set(true);
         this.tiempoInicioGrabacion = Date.now();
-        this.analisisActivo = true;
+
+        if (!this.esMobile()) {
+          this.analisisActivo = true;
+          this.procesarAudio();
+        }
 
         this.iniciarReconocimiento();
 
-        // Refrescar URL con autoplay
+        // Recargar el iframe CON autoplay: el video arranca cuando el usuario inicia su turno
         if (this.cancionSeleccionada()?.url_audio) {
-          const urlEmbed = this.convertirYoutubeAEmbed(this.cancionSeleccionada().url_audio);
+          const urlEmbed = this.convertirYoutubeAEmbed(this.cancionSeleccionada().url_audio, true);
           if (urlEmbed) this.videoUrl.set(this.sanitizer.bypassSecurityTrustResourceUrl(urlEmbed));
         }
-
-        this.procesarAudio();
       })
       .catch(err => {
         console.error('Error mic:', err);
@@ -627,33 +707,36 @@ export class CombatesPage implements OnInit, OnDestroy {
     ctx.stroke();
   }
 
-  async detenerGrabacion() {
+  detenerGrabacion() {
+    // Detener análisis en tiempo real (escritorio)
     this.analisisActivo = false;
     cancelAnimationFrame(this.animationFrameId);
-    this.detenerReconocimiento();
 
-    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
-      this.mediaRecorder.stop();
+    // Calcular métricas de escritorio antes de cerrar el contexto
+    const duracion = (Date.now() - this.tiempoInicioGrabacion) / 1000;
+    this.duracionAudio.set(duracion);
+
+    if (!this.esMobile()) {
+      this.rmsPromedio.set(this.muestrasAnalizadas > 0 ? this.sumaRms / this.muestrasAnalizadas : 0);
+      this.porcentajeSilencio.set(this.muestrasAnalizadas > 0 ? (this.muestrasEnSilencio / this.muestrasAnalizadas) * 100 : 0);
+      this.porcentajeActividad.set(this.muestrasAnalizadas > 0 ? (this.muestrasConActividad / this.muestrasAnalizadas) * 100 : 0);
+      this.porcentajeClipping.set(this.muestrasAnalizadas > 0 ? (this.muestrasSaturadas / this.muestrasAnalizadas) * 100 : 0);
     }
-    this.grabando.set(false);
 
     if (this.sourceNode) {
       this.sourceNode.mediaStream.getTracks().forEach((t: MediaStreamTrack) => t.stop());
     }
     if (this.audioContext) this.audioContext.close();
 
-    const duracion = (Date.now() - this.tiempoInicioGrabacion) / 1000;
-    this.duracionAudio.set(duracion);
-    this.rmsPromedio.set(this.muestrasAnalizadas > 0 ? this.sumaRms / this.muestrasAnalizadas : 0);
-    this.porcentajeSilencio.set(this.muestrasAnalizadas > 0 ? (this.muestrasEnSilencio / this.muestrasAnalizadas) * 100 : 0);
-    this.porcentajeActividad.set(this.muestrasAnalizadas > 0 ? (this.muestrasConActividad / this.muestrasAnalizadas) * 100 : 0);
-    this.porcentajeClipping.set(this.muestrasAnalizadas > 0 ? (this.muestrasSaturadas / this.muestrasAnalizadas) * 100 : 0);
+    // Detener reconocimiento — crea reconocimientoTerminado Promise
+    this.detenerReconocimiento();
 
-    // Esperar un momento para que el MediaRecorder termine de emitir los datos
-    setTimeout(() => {
-      const finalBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
-      this.procesarTurnoArena(finalBlob);
-    }, 600);
+    this.grabando.set(false);
+
+    // Detener grabador: el flujo continúa en mediaRecorder.onstop (definido en comenzarGrabacionReal)
+    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+      this.mediaRecorder.stop();
+    }
   }
 
   async procesarTurnoArena(blob: Blob) {
@@ -715,6 +798,80 @@ export class CombatesPage implements OnInit, OnDestroy {
     } finally {
       this.cargando.set(false);
     }
+  }
+
+  getPuntajeJugador(ronda: any, idJugador: any): number | string {
+    const turno = ronda?.turnos?.find((t: any) => t.id_usuario == idJugador);
+    return turno?.puntaje ?? '—';
+  }
+
+  private esMobile(): boolean {
+    if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+      return true;
+    }
+    return navigator.maxTouchPoints > 1 && /Macintosh/i.test(navigator.userAgent);
+  }
+
+  private async analizarAudioOffline(blob: Blob): Promise<void> {
+    if (blob.size === 0) {
+      this.usarMetricasEstimadas();
+      return;
+    }
+    try {
+      const arrayBuffer = await blob.arrayBuffer();
+      const ctx = new AudioContext();
+      let audioBuffer: AudioBuffer;
+      try {
+        audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+      } catch {
+        ctx.close();
+        this.usarMetricasEstimadas();
+        return;
+      }
+      ctx.close();
+
+      const datos = audioBuffer.getChannelData(0);
+      const n = datos.length;
+      const tamanoVentana = Math.floor(audioBuffer.sampleRate * 0.02);
+      const numVentanas = Math.floor(n / tamanoVentana);
+
+      let sumaCuadrados = 0;
+      let ventanasConActividad = 0;
+      let ventanasEnSilencio = 0;
+      let ventanasSaturadas = 0;
+
+      for (let v = 0; v < numVentanas; v++) {
+        const inicio = v * tamanoVentana;
+        let sumaVentana = 0;
+        let saturada = false;
+        for (let i = inicio; i < inicio + tamanoVentana; i++) {
+          const muestra = datos[i];
+          sumaVentana += muestra * muestra;
+          sumaCuadrados += muestra * muestra;
+          if (Math.abs(muestra) >= 0.99) saturada = true;
+        }
+        const rmsVentana = Math.sqrt(sumaVentana / tamanoVentana);
+        if (rmsVentana < 0.02) ventanasEnSilencio++; else ventanasConActividad++;
+        if (saturada) ventanasSaturadas++;
+      }
+
+      const rmsGlobal = n > 0 ? Math.sqrt(sumaCuadrados / n) : 0;
+      this.rmsPromedio.set(Number(rmsGlobal.toFixed(4)));
+      this.porcentajeSilencio.set(Number(((ventanasEnSilencio / numVentanas) * 100).toFixed(2)));
+      this.porcentajeActividad.set(Number(((ventanasConActividad / numVentanas) * 100).toFixed(2)));
+      this.porcentajeClipping.set(Number(((ventanasSaturadas / numVentanas) * 100).toFixed(2)));
+    } catch {
+      this.usarMetricasEstimadas();
+    }
+  }
+
+  private usarMetricasEstimadas(): void {
+    const duracion = this.duracionAudio();
+    if (duracion <= 0) return;
+    this.rmsPromedio.set(0.07);
+    this.porcentajeActividad.set(60);
+    this.porcentajeSilencio.set(40);
+    this.porcentajeClipping.set(0);
   }
 
   volverAlMenu() {

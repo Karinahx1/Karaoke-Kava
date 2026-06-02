@@ -148,7 +148,7 @@
         <h2 class="title-gradient">Buscando Rival...</h2>
         <div class="spinner big"></div>
         <p class="text-muted">Buscando un contrincante de tu mismo nivel.<br>Esto puede tomar unos momentos.</p>
-        <button class="btn-secondary mt-4" (click)="vistaActual.set('lista')">Cancelar búsqueda</button>
+        <button class="btn-secondary mt-4" (click)="cancelarBusqueda()">Cancelar búsqueda</button>
       </div>
     }
 
@@ -181,9 +181,9 @@
                 <div class="ronda-header">
                    <h3>Ronda {{ rondaActiva().numero_ronda }}</h3>
                    @if (!rondaActiva().id_cancion) {
-                      <p>Seleccionando cancin...</p>
+                      <p>Seleccionando canción...</p>
                    } @else {
-                      <p>Cancin: <strong>{{ rondaActiva().cancion?.titulo }}</strong></p>
+                      <p>Canción: <strong>{{ rondaActiva().cancion?.titulo }}</strong></p>
                    }
                 </div>
 
@@ -191,7 +191,7 @@
                    <!-- Mostrar lista de canciones solo si es el turno del selector -->
                    @if (rondaActiva().id_usuario_selector == usuario().id) {
                       <div class="selector-cancion">
-                         <h4>Es tu turno de elegir la cancin!</h4>
+                         <h4>¡Es tu turno de elegir la canción!</h4>
                          <div class="canciones-grid">
                             @for (c of canciones(); track c.id) {
                                <div class="cancion-card" (click)="crearRondaNueva(c.id)">
@@ -203,7 +203,7 @@
                    } @else {
                       <div class="esperando-oponente">
                          <div class="spinner"></div>
-                         <p>Esperando a que tu oponente elija una cancin...</p>
+                         <p>Esperando a que tu oponente elija una canción...</p>
                       </div>
                    }
                 } @else {
@@ -285,7 +285,7 @@
                    <!-- Inicio del combate, Jugador 1 debe elegir (el creador) -->
                    @if (combateActivo().id_usuario_jugador1 == usuario().id) {
                       <div class="selector-cancion">
-                         <h4>Es tu turno de elegir la cancin de la Ronda 1!</h4>
+                         <h4>¡Es tu turno de elegir la canción de la Ronda 1!</h4>
                          <div class="canciones-grid">
                             @for (c of canciones(); track c.id) {
                                <div class="cancion-card" (click)="crearRondaNueva(c.id)">
@@ -297,14 +297,14 @@
                    } @else {
                       <div class="esperando-oponente">
                          <div class="spinner"></div>
-                         <p>Esperando a que tu oponente elija la primera cancin...</p>
+                         <p>Esperando a que tu oponente elija la primera canción...</p>
                       </div>
                    }
                 } @else if (combateActivo().rondas?.length === 1) {
                    <!-- Fin de ronda 1, Jugador 2 elige ronda 2 -->
                    @if (combateActivo().id_usuario_jugador2 == usuario().id) {
                       <div class="selector-cancion">
-                         <h4>Es tu turno de elegir la cancin de la Ronda 2!</h4>
+                         <h4>¡Es tu turno de elegir la canción de la Ronda 2!</h4>
                          <div class="canciones-grid">
                             @for (c of canciones(); track c.id) {
                                <div class="cancion-card" (click)="crearRondaNueva(c.id)">
@@ -316,13 +316,13 @@
                    } @else {
                       <div class="esperando-oponente">
                          <div class="spinner"></div>
-                         <p>Esperando a que tu oponente elija la cancin de la Ronda 2...</p>
+                         <p>Esperando a que tu oponente elija la canción de la Ronda 2...</p>
                       </div>
                    }
                 } @else {
                    <div class="esperando-oponente">
                       <div class="spinner"></div>
-                      <p>Calculando resultados del combate...</p>
+                      <p>Preparando la siguiente ronda...</p>
                    </div>
                 }
              }
@@ -344,7 +344,7 @@
                </div>
                <h4>{{ combateActivo()?.jugador1?.nombre }}</h4>
                <div class="puntaje-box p1-color">
-                  {{ rondaResultadoActiva()?.turnos[0]?.id_usuario == combateActivo().jugador1.id ? rondaResultadoActiva()?.turnos[0]?.puntaje : rondaResultadoActiva()?.turnos[1]?.puntaje }}
+                  {{ getPuntajeJugador(rondaResultadoActiva(), combateActivo().jugador1.id) }}
                </div>
             </div>
 
@@ -357,7 +357,7 @@
                </div>
                <h4>{{ combateActivo()?.jugador2?.nombre }}</h4>
                <div class="puntaje-box p2-color">
-                  {{ rondaResultadoActiva()?.turnos[0]?.id_usuario == combateActivo().jugador2.id ? rondaResultadoActiva()?.turnos[0]?.puntaje : rondaResultadoActiva()?.turnos[1]?.puntaje }}
+                  {{ getPuntajeJugador(rondaResultadoActiva(), combateActivo().jugador2.id) }}
                </div>
             </div>
          </div>

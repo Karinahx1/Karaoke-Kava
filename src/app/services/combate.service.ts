@@ -43,6 +43,13 @@ export class CombateService {
     return res.json();
   }
 
+  async cancelarBusqueda(idCombate: string) {
+    const res = await fetch(`${this.apiUrl}/${idCombate}/cancelar-busqueda`, {
+      method: 'DELETE'
+    });
+    return res.json();
+  }
+
   async rechazarCombate(idCombate: string) {
     const res = await fetch(`${this.apiUrl}/${idCombate}/rechazar`, {
       method: 'DELETE'
