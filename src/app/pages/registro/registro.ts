@@ -18,11 +18,21 @@ export class RegistroPage implements OnInit {
   email = '';
   numDocumento = '';
   cargando = false;
-  errorEmail = '';
   mensajeInfo = '';
+
+  // Mensajes de error por campo
+  errorNombre    = '';
+  errorApellido  = '';
+  errorDocumento = '';
+  errorEmail     = '';
 
   // Debe existir un registro con id = 1 en tbl_genero_persona.
   idGenero = 1;
+
+  // Solo letras (incluyendo tildes y ñ), espacios, guion y apóstrofe
+  private readonly regexNombre   = /^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s'\-]+$/;
+  // Solo dígitos
+  private readonly regexDocumento = /^\d+$/;
 
   constructor(
     private router: Router,
@@ -44,22 +54,79 @@ export class RegistroPage implements OnInit {
     localStorage.removeItem('email_no_registrado');
   }
 
+  private validarFormulario(): boolean {
+    let valido = true;
+
+    // Limpiar errores previos
+    this.errorNombre    = '';
+    this.errorApellido  = '';
+    this.errorDocumento = '';
+    this.errorEmail     = '';
+
+    // Nombre
+    const nombre = this.nombre.trim();
+    if (!nombre) {
+      this.errorNombre = 'El nombre es obligatorio.';
+      valido = false;
+    } else if (nombre.length < 2) {
+      this.errorNombre = 'El nombre debe tener al menos 2 caracteres.';
+      valido = false;
+    } else if (nombre.length > 50) {
+      this.errorNombre = 'El nombre no puede superar los 50 caracteres.';
+      valido = false;
+    } else if (!this.regexNombre.test(nombre)) {
+      this.errorNombre = 'El nombre solo puede contener letras y espacios.';
+      valido = false;
+    }
+
+    // Apellido
+    const apellido = this.apellido.trim();
+    if (!apellido) {
+      this.errorApellido = 'El apellido es obligatorio.';
+      valido = false;
+    } else if (apellido.length < 2) {
+      this.errorApellido = 'El apellido debe tener al menos 2 caracteres.';
+      valido = false;
+    } else if (apellido.length > 50) {
+      this.errorApellido = 'El apellido no puede superar los 50 caracteres.';
+      valido = false;
+    } else if (!this.regexNombre.test(apellido)) {
+      this.errorApellido = 'El apellido solo puede contener letras y espacios.';
+      valido = false;
+    }
+
+    // Número de documento
+    const doc = this.numDocumento.trim();
+    if (!doc) {
+      this.errorDocumento = 'El número de documento es obligatorio.';
+      valido = false;
+    } else if (!this.regexDocumento.test(doc)) {
+      this.errorDocumento = 'El documento solo puede contener dígitos.';
+      valido = false;
+    } else if (doc.length < 6) {
+      this.errorDocumento = 'El documento debe tener al menos 6 dígitos.';
+      valido = false;
+    } else if (doc.length > 15) {
+      this.errorDocumento = 'El documento no puede superar los 15 dígitos.';
+      valido = false;
+    }
+
+    // Email
+    const email = this.email.trim();
+    if (!email) {
+      this.errorEmail = 'El correo electrónico es obligatorio.';
+      valido = false;
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      this.errorEmail = 'Por favor, ingresa un correo electrónico válido.';
+      valido = false;
+    }
+
+    return valido;
+  }
+
   async registrarse() {
     try {
-      this.errorEmail = '';
-
-      // Validar campos obligatorios
-      if (!this.nombre.trim() || !this.apellido.trim() || !this.numDocumento.trim() || !this.email.trim()) {
-        this.toastService.warning('Por favor, completa todos los campos del formulario.');
-        return;
-      }
-
-      // Validar formato de email
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(this.email.trim())) {
-        this.errorEmail = 'Por favor, ingresa un correo electrónico válido.';
-        return;
-      }
+      if (!this.validarFormulario()) return;
 
       this.cargando = true;
 

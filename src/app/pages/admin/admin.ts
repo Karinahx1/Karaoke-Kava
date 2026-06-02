@@ -29,6 +29,11 @@ export class AdminPage implements OnInit {
   letra = '';
   urlAudio = '';
 
+  // Errores inline por campo
+  errores: Record<string, string> = {};
+
+  private readonly regexYoutube = /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)[\w\-]{11}/;
+
   constructor(
     private adminCancionService: AdminCancionService,
     private router: Router,
@@ -84,23 +89,80 @@ export class AdminPage implements OnInit {
       .filter(valor => valor.length > 0);
   }
 
+  private validarCancion(): boolean {
+    this.errores = {};
+    let valido = true;
+
+    // Título
+    const titulo = this.titulo.trim();
+    if (!titulo) {
+      this.errores['titulo'] = 'El título es obligatorio.';
+      valido = false;
+    } else if (titulo.length > 100) {
+      this.errores['titulo'] = 'El título no puede superar los 100 caracteres.';
+      valido = false;
+    }
+
+    // Artista(s): puede ser uno o varios separados por coma — cada parte debe ser no vacía
+    const artistas = this.separarPorComas(this.nombreArtista);
+    if (!this.nombreArtista.trim()) {
+      this.errores['artista'] = 'Ingresa al menos un artista.';
+      valido = false;
+    } else if (artistas.length === 0) {
+      this.errores['artista'] = 'Ingresa nombres de artista válidos (sin comas vacías).';
+      valido = false;
+    }
+
+    // Género(s): igual que artistas
+    const generos = this.separarPorComas(this.nombreGenero);
+    if (!this.nombreGenero.trim()) {
+      this.errores['genero'] = 'Ingresa al menos un género.';
+      valido = false;
+    } else if (generos.length === 0) {
+      this.errores['genero'] = 'Ingresa nombres de género válidos (sin comas vacías).';
+      valido = false;
+    }
+
+    // Duración
+    const dur = Number(this.duracion);
+    if (!this.duracion && this.duracion !== 0) {
+      this.errores['duracion'] = 'La duración es obligatoria.';
+      valido = false;
+    } else if (!Number.isInteger(dur) || dur <= 0) {
+      this.errores['duracion'] = 'La duración debe ser un número entero mayor que 0.';
+      valido = false;
+    } else if (dur > 99999) {
+      this.errores['duracion'] = 'La duración ingresada parece demasiado larga.';
+      valido = false;
+    }
+
+    // URL de YouTube
+    const url = this.urlAudio.trim();
+    if (!url) {
+      this.errores['urlAudio'] = 'La URL de YouTube es obligatoria.';
+      valido = false;
+    } else if (!this.regexYoutube.test(url)) {
+      this.errores['urlAudio'] = 'Ingresa una URL válida de YouTube (youtube.com o youtu.be).';
+      valido = false;
+    }
+
+    return valido;
+  }
+
   async guardarCancion() {
+    if (!this.validarCancion()) return;
+
     try {
       const artistas = this.separarPorComas(this.nombreArtista);
-      const generos = this.separarPorComas(this.nombreGenero);
-
-      if (!this.titulo || artistas.length === 0 || generos.length === 0 || !this.duracion || !this.urlAudio) {
-        alert('Completa título, artista(s), género(s), duración y URL.');
-        return;
-      }
+      const generos  = this.separarPorComas(this.nombreGenero);
 
       const cancion = {
-        titulo: this.titulo,
-        duracion: Number(this.duracion),
-        letra: this.letra,
-        url_audio: this.urlAudio,
+        titulo:          this.titulo.trim(),
+        duracion:        Number(this.duracion),
+        letra:           this.letra,
+        url_audio:       this.urlAudio.trim(),
         nombresArtistas: artistas,
-        nombresGeneros: generos
+        nombresGeneros:  generos
       };
 
       if (this.editando() && this.idEditando()) {
@@ -159,6 +221,7 @@ export class AdminPage implements OnInit {
     this.duracion = null;
     this.letra = '';
     this.urlAudio = '';
+    this.errores = {};
   }
 
   pedirConfirmacionLogout() {

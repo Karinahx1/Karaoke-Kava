@@ -40,26 +40,39 @@
         name="titulo"
         [(ngModel)]="titulo"
         placeholder="Ej: Despacito"
+        maxlength="100"
         required
+        [class.input-error]="errores['titulo']"
       />
+      @if (errores['titulo']) {
+        <span class="error-msg">{{ errores['titulo'] }}</span>
+      }
 
-      <label>Artista(s)</label>
+      <label>Artista(s) <small>— si son varios, sepáralos con coma</small></label>
       <input
         type="text"
         name="nombreArtista"
         [(ngModel)]="nombreArtista"
         placeholder="Ej: Luis Fonsi, Daddy Yankee"
         required
+        [class.input-error]="errores['artista']"
       />
+      @if (errores['artista']) {
+        <span class="error-msg">{{ errores['artista'] }}</span>
+      }
 
-      <label>Género(s)</label>
+      <label>Género(s) <small>— si son varios, sepáralos con coma</small></label>
       <input
         type="text"
         name="nombreGenero"
         [(ngModel)]="nombreGenero"
         placeholder="Ej: Pop, Reggaeton"
         required
+        [class.input-error]="errores['genero']"
       />
+      @if (errores['genero']) {
+        <span class="error-msg">{{ errores['genero'] }}</span>
+      }
 
       <label>Duración en segundos</label>
       <input
@@ -67,19 +80,28 @@
         name="duracion"
         [(ngModel)]="duracion"
         placeholder="Ej: 270"
+        min="1"
         required
+        [class.input-error]="errores['duracion']"
       />
+      @if (errores['duracion']) {
+        <span class="error-msg">{{ errores['duracion'] }}</span>
+      }
 
       <label>URL de YouTube</label>
       <input
-        type="text"
+        type="url"
         name="urlAudio"
         [(ngModel)]="urlAudio"
         placeholder="https://www.youtube.com/watch?v=..."
         required
+        [class.input-error]="errores['urlAudio']"
       />
+      @if (errores['urlAudio']) {
+        <span class="error-msg">{{ errores['urlAudio'] }}</span>
+      }
 
-      <label>Letra</label>
+      <label>Letra <small>— opcional</small></label>
       <textarea
         name="letra"
         [(ngModel)]="letra"
@@ -169,42 +191,64 @@
           type="text"
           name="tituloModal"
           [(ngModel)]="titulo"
+          maxlength="100"
           required
+          [class.input-error]="errores['titulo']"
         />
+        @if (errores['titulo']) {
+          <span class="error-msg">{{ errores['titulo'] }}</span>
+        }
 
-        <label>Artista(s)</label>
+        <label>Artista(s) <small>— si son varios, sepáralos con coma</small></label>
         <input
           type="text"
           name="nombreArtistaModal"
           [(ngModel)]="nombreArtista"
           required
+          [class.input-error]="errores['artista']"
         />
+        @if (errores['artista']) {
+          <span class="error-msg">{{ errores['artista'] }}</span>
+        }
 
-        <label>Género(s)</label>
+        <label>Género(s) <small>— si son varios, sepáralos con coma</small></label>
         <input
           type="text"
           name="nombreGeneroModal"
           [(ngModel)]="nombreGenero"
           required
+          [class.input-error]="errores['genero']"
         />
+        @if (errores['genero']) {
+          <span class="error-msg">{{ errores['genero'] }}</span>
+        }
 
-        <label>Duración</label>
+        <label>Duración en segundos</label>
         <input
           type="number"
           name="duracionModal"
           [(ngModel)]="duracion"
+          min="1"
           required
+          [class.input-error]="errores['duracion']"
         />
+        @if (errores['duracion']) {
+          <span class="error-msg">{{ errores['duracion'] }}</span>
+        }
 
         <label>URL de YouTube</label>
         <input
-          type="text"
+          type="url"
           name="urlAudioModal"
           [(ngModel)]="urlAudio"
           required
+          [class.input-error]="errores['urlAudio']"
         />
+        @if (errores['urlAudio']) {
+          <span class="error-msg">{{ errores['urlAudio'] }}</span>
+        }
 
-        <label>Letra</label>
+        <label>Letra <small>— opcional</small></label>
         <textarea
           name="letraModal"
           [(ngModel)]="letra"

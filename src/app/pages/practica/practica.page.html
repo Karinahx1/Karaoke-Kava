@@ -24,14 +24,14 @@
         [value]="cancion.id"
         [selected]="cancionSeleccionada()?.id === cancion.id"
       >
-        {{ cancion.titulo }} - {{ cancion.artista }}
+        {{ cancion.titulo }}{{ cancion.artistas?.length ? ' - ' + cancion.artistas.join(', ') : '' }}
       </option>
     </select>
   </section>
 
   <section class="panel panel-info" *ngIf="cancionSeleccionada() as cancion">
     <h2>{{ cancion.titulo }}</h2>
-    <p><strong>Artista:</strong> {{ cancion.artista }}</p>
+    <p><strong>Artista:</strong> {{ cancion.artistas?.length ? cancion.artistas.join(', ') : 'Artista desconocido' }}</p>
     <p><strong>Duración:</strong> {{ cancion.duracion }} segundos</p>
   </section>
 

@@ -431,3 +431,33 @@ tr:hover {
   from { opacity: 0; transform: translateY(20px) scale(0.95); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
+
+/* ── Validación de campos ── */
+input.input-error,
+textarea.input-error {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+}
+
+.error-msg {
+  color: #f87171;
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin-top: 2px;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.error-msg::before {
+  content: "⚠";
+  font-size: 0.75rem;
+}
+
+label small {
+  font-size: 0.78rem;
+  font-weight: 400;
+  opacity: 0.65;
+  margin-left: 4px;
+}
