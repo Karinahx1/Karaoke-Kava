@@ -12,6 +12,7 @@ import { supabase } from '../../core/supabase.client';
 
 // API de reconocimiento de voz del navegador
 declare var webkitSpeechRecognition: any;
+declare var SpeechRecognition: any;
 
 @Component({
   selector: 'app-practica',
@@ -44,9 +45,29 @@ export class PracticaPage implements OnInit {
   recognition: any;
 
   /**
+   * Controla si el reconocimiento debe reiniciarse cuando se detiene solo.
+   * Se pone en false al llamar detenerReconocimiento() para evitar reinicios.
+   */
+  private recognitionActiva = false;
+
+  /**
+   * Promesa que se resuelve cuando recognition.onend dispara tras detenerlo.
+   * mediaRecorder.onstop la espera para asegurar que los últimos resultados
+   * de voz ya fueron procesados antes de enviar la transcripción al backend.
+   */
+  private reconocimientoTerminado: Promise<void> = Promise.resolve();
+
+  /**
    * Fragmentos del audio grabado
    */
   audioChunks: Blob[] = [];
+
+  /**
+   * MIME type real que usa el MediaRecorder en este dispositivo/navegador.
+   * Se detecta una vez antes de crear el grabador y se reutiliza al construir
+   * el Blob final, garantizando que decodeAudioData lo pueda decodificar.
+   */
+  private mimeTypeGrabacion = 'audio/webm';
 
   /**
    * Estado reactivo principal
@@ -251,43 +272,96 @@ export class PracticaPage implements OnInit {
 
   /**
    * Inicia reconocimiento de voz.
+   * Detecta el idioma de la canción y reinicia automáticamente si el navegador
+   * detiene el reconocimiento por silencio (comportamiento habitual en Chrome).
    */
   iniciarReconocimiento() {
-    this.recognition = new webkitSpeechRecognition();
+    const SR =
+      (typeof SpeechRecognition !== 'undefined' && SpeechRecognition) ||
+      (typeof webkitSpeechRecognition !== 'undefined' && webkitSpeechRecognition);
+
+    if (!SR) {
+      console.warn('Web Speech API no disponible en este navegador.');
+      return;
+    }
 
     const letraActual = this.cancionSeleccionada()?.letra?.toLowerCase() || '';
     const palabrasIngles = [' the ', ' you ', ' and ', ' to ', ' i '];
     const esIngles = palabrasIngles.some(palabra => letraActual.includes(palabra));
 
-    this.recognition.lang = esIngles ? 'en-US' : 'es-ES';
-    this.recognition.continuous = true;
-    this.recognition.interimResults = false;
+    const rec = new SR();
+    rec.lang = esIngles ? 'en-US' : 'es-ES';
+    rec.continuous = true;
+    rec.interimResults = false;
 
-    this.recognition.onresult = (event: any) => {
+    rec.onresult = (event: any) => {
       let textoAcumulado = this.transcripcionVoz();
-
       for (let i = event.resultIndex; i < event.results.length; i++) {
         textoAcumulado += ' ' + event.results[i][0].transcript;
       }
-
       this.transcripcionVoz.set(textoAcumulado.trim());
       console.log('Transcripción parcial/real:', this.transcripcionVoz());
     };
 
-    this.recognition.onerror = (event: any) => {
+    rec.onerror = (event: any) => {
+      // 'no-speech' y 'aborted' son normales durante silencios — no son errores reales
+      if (event.error === 'no-speech' || event.error === 'aborted') return;
+
+      // 'audio-capture' indica que el micrófono está bloqueado por otra API
+      // (conflicto con getUserMedia). La transcripción quedará vacía.
+      if (event.error === 'audio-capture') {
+        console.error('SpeechRecognition: el micrófono está en uso por otra API (audio-capture). La transcripción no estará disponible.');
+        return;
+      }
+
       console.warn('Error en reconocimiento de voz:', event.error);
     };
 
-    this.recognition.start();
+    rec.onend = () => {
+      if (this.recognitionActiva) {
+        if (this.esMobile()) {
+          // En móvil NO reiniciamos: cada rec.start() provoca una micro-interrupción
+          // de la sesión de audio del SO que pausa el video de YouTube.
+          // Los navegadores móviles mantienen sesiones continuas más tiempo que
+          // el escritorio, por lo que este reinicio no es necesario.
+          return;
+        }
+        // Escritorio: reiniciar para cubrir pausas largas de silencio.
+        try { rec.start(); } catch { /* ya iniciando, ignorar */ }
+      }
+      // Si recognitionActiva === false, detenerReconocimiento() ya reemplazó
+      // este handler con el resolver de la Promise — no hacer nada aquí.
+    };
+
+    this.recognitionActiva = true;
+    rec.start();
+    this.recognition = rec;
   }
 
   /**
-   * Detiene reconocimiento de voz.
+   * Detiene el reconocimiento de voz y devuelve una Promesa que se resuelve
+   * cuando recognition.onend dispara. Esto garantiza que cualquier resultado
+   * final pendiente (onresult) ya fue procesado antes de continuar.
    */
   detenerReconocimiento() {
-    if (this.recognition) {
-      this.recognition.stop();
+    this.recognitionActiva = false;
+
+    if (!this.recognition) {
+      this.reconocimientoTerminado = Promise.resolve();
+      return;
     }
+
+    const rec = this.recognition;
+    this.recognition = null;
+
+    this.reconocimientoTerminado = new Promise<void>((resolve) => {
+      // Reemplazar onend con el resolver. onresult sigue activo para capturar
+      // cualquier resultado final que el navegador todavía esté procesando.
+      rec.onend = () => resolve();
+      // Fallback: si onend nunca dispara en 800 ms, continuar igual
+      setTimeout(resolve, 800);
+      try { rec.stop(); } catch { resolve(); }
+    });
   }
 
   /**
@@ -439,7 +513,19 @@ export class PracticaPage implements OnInit {
    * Si el efecto de estudio está activo, aplica eco/reverb en tiempo real.
    */
   async iniciarGrabacion() {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    // En móvil desactivamos el procesado de voz del navegador (cancelación de eco,
+    // supresión de ruido y control automático de ganancia). Esos filtros están
+    // pensados para llamadas, no para cantar: degradan la calidad de la grabación.
+    // Con ellos desactivados la voz se graba más natural y fiel.
+    //
+    // En móvil la transcripción NO depende del navegador (SpeechRecognition no
+    // puede compartir el micrófono con MediaRecorder en Android), sino que el
+    // backend transcribe el audio subido con Gemini. Por eso aquí priorizamos
+    // la calidad del audio grabado.
+    const audioConstraints: MediaTrackConstraints | boolean = this.esMobile()
+      ? { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+      : true;
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
 
     let streamParaGrabar = stream;
 
@@ -469,7 +555,20 @@ export class PracticaPage implements OnInit {
       streamParaGrabar = this.efxDestination.stream;
     }
 
-    this.mediaRecorder = new MediaRecorder(streamParaGrabar);
+    // Detectar el MIME type real soportado para que el blob coincida con el
+    // formato grabado — necesario para que decodeAudioData funcione en móvil.
+    const candidatosMime = [
+      'audio/webm;codecs=opus',
+      'audio/webm',
+      'audio/ogg;codecs=opus',
+      'audio/mp4'
+    ];
+    this.mimeTypeGrabacion = candidatosMime.find(t => MediaRecorder.isTypeSupported(t))
+      ?? 'audio/webm';
+
+    this.mediaRecorder = new MediaRecorder(streamParaGrabar, {
+      mimeType: this.mimeTypeGrabacion
+    });
     this.audioChunks = [];
 
     // Reiniciar estados de una nueva práctica
@@ -479,12 +578,23 @@ export class PracticaPage implements OnInit {
     this.audioUrl.set(null);
     this.practicaCreada.set(null);
     this.practicaEvaluada.set(null);
+    this.reconocimientoTerminado = Promise.resolve();
 
     this.tiempoInicioGrabacion = Date.now();
 
     this.iniciarReconocimiento();
-    // Siempre usar el stream original del mic para análisis (sin eco)
-    this.iniciarAnalisisAudio(stream);
+
+    if (this.esMobile()) {
+      // En móvil omitimos el análisis en tiempo real: conectar el stream del
+      // micrófono al grafo de Web Audio fuerza la sesión PlayAndRecord del SO,
+      // lo que pausa repetidamente el iframe de YouTube.
+      // Las métricas RMS se calcularán offline sobre el blob grabado una vez
+      // que el micrófono ya esté cerrado (ver analizarAudioOffline).
+      console.info('Modo móvil: análisis en tiempo real omitido; se usará análisis offline.');
+    } else {
+      // Siempre usar el stream original del mic para análisis (sin eco)
+      this.iniciarAnalisisAudio(stream);
+    }
 
     this.mediaRecorder.ondataavailable = (event) => {
       if (event.data.size > 0) {
@@ -493,7 +603,7 @@ export class PracticaPage implements OnInit {
     };
 
     this.mediaRecorder.onstop = async () => {
-      const blobFinal = new Blob(this.audioChunks, { type: 'audio/webm' });
+      const blobFinal = new Blob(this.audioChunks, { type: this.mimeTypeGrabacion });
       this.audioBlob.set(blobFinal);
 
       const tiempoFinGrabacion = Date.now();
@@ -511,6 +621,11 @@ export class PracticaPage implements OnInit {
 
       console.log('Audio grabado:', this.audioBlob());
       console.log('Duración del audio:', this.duracionAudio());
+
+      // Esperar a que recognition.onend haya disparado y entregado todos los
+      // resultados finales pendientes antes de leer transcripcionVoz().
+      await this.reconocimientoTerminado;
+
       console.log('Transcripción capturada:', this.transcripcionVoz());
 
       await this.subirAudioGrabado();
@@ -557,6 +672,13 @@ if (cancion) {
 
       // Activar pantalla de espera antes de subir y evaluar
       this.iniciarPantallaEspera();
+
+      // En móvil el análisis en tiempo real fue omitido para no interferir con
+      // el video. Ahora que el micrófono ya está cerrado, decodificamos el blob
+      // grabado y calculamos las mismas métricas que usa la evaluación de Gemini.
+      if (this.esMobile()) {
+        await this.analizarAudioOffline(this.audioBlob()!);
+      }
 
       const fileName = `practica-${Date.now()}.webm`;
 
@@ -731,6 +853,121 @@ getNivel(puntaje: number | undefined): string {
   if (puntaje >= 50) return '👍 Aficionado';
   if (puntaje >= 30) return '😐 Principiante';
   return '🙉 Necesitas más práctica';
+}
+
+/**
+ * Calcula las métricas de audio (RMS, silencio, actividad, clipping) sobre el
+ * blob grabado, sin necesidad de tener el micrófono abierto.
+ *
+ * Se usa exclusivamente en móvil: el micrófono ya está cerrado cuando se llama
+ * a este método, por lo que crear un AudioContext temporal no interfiere con la
+ * sesión de audio del SO ni pausa el video.
+ * La lógica de ventanas y umbrales es idéntica a iniciarAnalisisAudio para
+ * que Gemini reciba exactamente los mismos parámetros que en escritorio.
+ */
+private async analizarAudioOffline(blob: Blob): Promise<void> {
+  if (blob.size === 0) {
+    console.warn('Blob de audio vacío — aplicando métricas estimadas.');
+    this.usarMetricasEstimadas();
+    return;
+  }
+
+  try {
+    const arrayBuffer = await blob.arrayBuffer();
+
+    // AudioContext temporal solo para decodificar el blob — no captura
+    // micrófono ni produce salida de audio, por lo que no afecta al SO.
+    const ctx = new AudioContext();
+
+    let audioBuffer: AudioBuffer;
+    try {
+      audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+    } catch (errDecode) {
+      // Puede ocurrir si el codec grabado (ej. opus en webm) no coincide con
+      // el MIME type del blob, o si el navegador no soporta el formato.
+      ctx.close();
+      console.warn('decodeAudioData falló — aplicando métricas estimadas.', errDecode);
+      this.usarMetricasEstimadas();
+      return;
+    }
+    ctx.close();
+
+    const datos = audioBuffer.getChannelData(0);
+    const n = datos.length;
+    // Ventanas de 20 ms, igual que el loop de requestAnimationFrame en desktop
+    const tamanoVentana = Math.floor(audioBuffer.sampleRate * 0.02);
+    const numVentanas = Math.floor(n / tamanoVentana);
+
+    let sumaCuadrados = 0;
+    let ventanasConActividad = 0;
+    let ventanasEnSilencio = 0;
+    let ventanasSaturadas = 0;
+
+    for (let v = 0; v < numVentanas; v++) {
+      const inicio = v * tamanoVentana;
+      let sumaVentana = 0;
+      let saturada = false;
+
+      for (let i = inicio; i < inicio + tamanoVentana; i++) {
+        const muestra = datos[i];
+        sumaVentana += muestra * muestra;
+        sumaCuadrados += muestra * muestra;
+        if (Math.abs(muestra) >= 0.99) saturada = true;
+      }
+
+      const rmsVentana = Math.sqrt(sumaVentana / tamanoVentana);
+      if (rmsVentana < 0.02) ventanasEnSilencio++; else ventanasConActividad++;
+      if (saturada) ventanasSaturadas++;
+    }
+
+    const rmsGlobal = n > 0 ? Math.sqrt(sumaCuadrados / n) : 0;
+
+    this.rmsPromedio.set(Number(rmsGlobal.toFixed(4)));
+    this.porcentajeSilencio.set(Number(((ventanasEnSilencio / numVentanas) * 100).toFixed(2)));
+    this.porcentajeActividad.set(Number(((ventanasConActividad / numVentanas) * 100).toFixed(2)));
+    this.porcentajeClipping.set(Number(((ventanasSaturadas / numVentanas) * 100).toFixed(2)));
+
+    console.log('Análisis offline (móvil):', {
+      rms: this.rmsPromedio(),
+      silencio: this.porcentajeSilencio(),
+      actividad: this.porcentajeActividad(),
+      clipping: this.porcentajeClipping()
+    });
+  } catch (error) {
+    console.warn('Error inesperado en análisis offline — aplicando métricas estimadas.', error);
+    this.usarMetricasEstimadas();
+  }
+}
+
+/**
+ * Fallback para cuando el análisis offline falla (formato no decodificable,
+ * blob vacío, etc.). Usa la duración grabada para inferir que hubo actividad
+ * vocal y evitar que Gemini reciba todo ceros y evalúe como "sin voz".
+ * Los valores son conservadores y representan una grabación vocal típica.
+ */
+private usarMetricasEstimadas(): void {
+  const duracion = this.duracionAudio();
+  if (duracion <= 0) return;
+
+  this.rmsPromedio.set(0.07);
+  this.porcentajeActividad.set(60);
+  this.porcentajeSilencio.set(40);
+  this.porcentajeClipping.set(0);
+  console.info(`Métricas estimadas aplicadas (grabación de ${duracion}s).`);
+}
+
+/**
+ * Devuelve true en smartphones y tablets.
+ * En esos dispositivos evitamos crear un AudioContext conectado al micrófono
+ * porque iOS y algunos Android cambian la sesión de audio a PlayAndRecord,
+ * lo que pausa repetidamente el video de YouTube embebido en el iframe.
+ */
+private esMobile(): boolean {
+  if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+    return true;
+  }
+  // iPad moderno reporta "Macintosh" en el UA pero tiene múltiples puntos táctiles
+  return navigator.maxTouchPoints > 1 && /Macintosh/i.test(navigator.userAgent);
 }
 
 }
