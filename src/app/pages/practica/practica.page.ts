@@ -255,7 +255,11 @@ export class PracticaPage implements OnInit {
   iniciarReconocimiento() {
     this.recognition = new webkitSpeechRecognition();
 
-    this.recognition.lang = 'es-ES';
+    const letraActual = this.cancionSeleccionada()?.letra?.toLowerCase() || '';
+    const palabrasIngles = [' the ', ' you ', ' and ', ' to ', ' i '];
+    const esIngles = palabrasIngles.some(palabra => letraActual.includes(palabra));
+
+    this.recognition.lang = esIngles ? 'en-US' : 'es-ES';
     this.recognition.continuous = true;
     this.recognition.interimResults = false;
 
