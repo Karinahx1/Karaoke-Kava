@@ -77,7 +77,31 @@
           </div>
         </section>
 
-        <!-- Lista de combates -->
+        <!-- Invitaciones pendientes (destacadas) -->
+        @if (invitacionesPendientes().length > 0) {
+          <section class="invitaciones-section">
+            <h2>🔔 Invitaciones Pendientes</h2>
+            <div class="combates-list">
+              @for (c of invitacionesPendientes(); track c.id) {
+                <div class="combate-item invitacion-destacada">
+                  <div class="combate-info">
+                    <div class="combate-players">
+                      <span class="p-name p1-color">{{ c.jugador1?.nombre || '...' }}</span>
+                      <span class="mini-vs">te retó</span>
+                    </div>
+                    <span class="combate-status badge-1">⏳ Te invitaron a combatir</span>
+                  </div>
+                  <div class="combate-actions">
+                    <button class="btn-success" (click)="aceptarInvitacion(c.id)">✅ Aceptar</button>
+                    <button class="btn-danger-small" (click)="rechazarInvitacion(c.id)">❌ Rechazar</button>
+                  </div>
+                </div>
+              }
+            </div>
+          </section>
+        }
+
+        <!-- Lista de todos los combates -->
         <section class="list-section">
           <h2>Tus Combates</h2>
           @if (misCombates().length === 0) {
@@ -101,11 +125,13 @@
                   </div>
 
                   <div class="combate-actions">
-                    @if (c.id_estado === 1 && c.id_usuario_jugador2 === usuario().id) {
-                      <button class="btn-success" (click)="aceptarInvitacion(c.id)">Aceptar</button>
-                    }
                     @if (c.id_estado === 3) {
                       <button class="btn-primary-small" (click)="entrarArena(c.id)">Entrar ⚔️</button>
+                    }
+                    @if (c.id_estado === 4) {
+                      <span class="badge-resultado">
+                        {{ c.id_usuario_ganador == usuario().id ? '🏆 Ganaste' : '😔 Perdiste' }}
+                      </span>
                     }
                   </div>
                 </div>
@@ -149,13 +175,237 @@
           </div>
         </header>
 
-        <div class="arena-content">
-          <div class="arena-placeholder">
-            <span>🎤</span>
-            <p>La arena de canto se activará en el siguiente paso de desarrollo.</p>
-            <p class="text-muted">Aquí irá la selección de canción y la grabación de cada ronda.</p>
+          <div class="arena-content">
+             <!-- Combate en curso -->
+             @if (rondaActiva()) {
+                <div class="ronda-header">
+                   <h3>Ronda {{ rondaActiva().numero_ronda }}</h3>
+                   @if (!rondaActiva().id_cancion) {
+                      <p>Seleccionando cancin...</p>
+                   } @else {
+                      <p>Cancin: <strong>{{ rondaActiva().cancion?.titulo }}</strong></p>
+                   }
+                </div>
+
+                @if (!rondaActiva().id_cancion) {
+                   <!-- Mostrar lista de canciones solo si es el turno del selector -->
+                   @if (rondaActiva().id_usuario_selector == usuario().id) {
+                      <div class="selector-cancion">
+                         <h4>Es tu turno de elegir la cancin!</h4>
+                         <div class="canciones-grid">
+                            @for (c of canciones(); track c.id) {
+                               <div class="cancion-card" (click)="crearRondaNueva(c.id)">
+                                  {{ c.titulo }}
+                               </div>
+                            }
+                         </div>
+                      </div>
+                   } @else {
+                      <div class="esperando-oponente">
+                         <div class="spinner"></div>
+                         <p>Esperando a que tu oponente elija una cancin...</p>
+                      </div>
+                   }
+                } @else {
+                   <!-- Ya hay cancin elegida, mostrar video y grabadora -->
+                   @if (turnoActual()) {
+                      <!-- El usuario ya cant -->
+                      <div class="turno-completado">
+                         <h4>Ya completaste tu turno! Puntuacin: {{ turnoActual().puntaje }}</h4>
+                         <p class="text-muted">{{ turnoActual().feedback }}</p>
+                         
+                         @if (!oponenteYaCanto()) {
+                            <div class="esperando-oponente mt-3">
+                               <div class="spinner"></div>
+                               <p>Esperando a que tu oponente termine de cantar...</p>
+                             </div>
+                          }
+                       </div>
+                    } @else {
+                       <!-- Es el turno de cantar del usuario -->
+                       <div class="grabadora-arena">
+                          <!-- VIDEO GRANDE -->
+                          <div class="video-container">
+                             @if (videoUrl()) {
+                                <iframe
+                                   [src]="videoUrl()"
+                                   frameborder="0"
+                                   allow="autoplay; encrypted-media; picture-in-picture"
+                                   allowfullscreen
+                                   class="karaoke-iframe">
+                                </iframe>
+                             } @else {
+                                <div class="video-placeholder">
+                                   <span>🎵</span>
+                                   <p>Cargando video...</p>
+                                </div>
+                             }
+                          </div>
+
+                          <!-- CANCION INFO BAR -->
+                          <div class="cancion-info-bar">
+                             <div class="cancion-icon">🎤</div>
+                             <div>
+                                <div class="cancion-nombre-arena">{{ rondaActiva().cancion?.titulo }}</div>
+                                <div class="cancion-artista">Ronda {{ rondaActiva().numero_ronda }} · ¡Canta con todo!</div>
+                             </div>
+                          </div>
+
+                          <!-- CONTROLES -->
+                          <div class="controles-grabacion">
+                             @if (cuentaRegresiva()) {
+                                <div class="countdown-big">
+                                   <div class="countdown-number">{{ cuentaRegresiva() }}</div>
+                                   <div class="countdown-label">¡Prepárate para cantar!</div>
+                                </div>
+                             } @else if (!grabando()) {
+                                <button class="btn-iniciar-turno" (click)="iniciarAnalisis()">
+                                   <span class="mic-icon">🎤</span>
+                                   <span>Iniciar mi turno</span>
+                                </button>
+                             } @else {
+                                <div class="grabando-panel">
+                                   <div class="grabando-indicator">
+                                      <div class="pulse-dot"></div>
+                                      <span>GRABANDO...</span>
+                                   </div>
+                                   <canvas #visualizadorArena class="visualizador-onda" width="500" height="80"></canvas>
+                                   <button class="btn-detener-turno" (click)="detenerGrabacion()">
+                                      ⏹ Detener y Evaluar
+                                   </button>
+                                </div>
+                             }
+                          </div>
+                       </div>
+                    }
+                 }
+              } @else {
+                <!-- No hay ronda activa -->
+                @if (combateActivo().rondas?.length === 0) {
+                   <!-- Inicio del combate, Jugador 1 debe elegir (el creador) -->
+                   @if (combateActivo().id_usuario_jugador1 == usuario().id) {
+                      <div class="selector-cancion">
+                         <h4>Es tu turno de elegir la cancin de la Ronda 1!</h4>
+                         <div class="canciones-grid">
+                            @for (c of canciones(); track c.id) {
+                               <div class="cancion-card" (click)="crearRondaNueva(c.id)">
+                                  {{ c.titulo }}
+                               </div>
+                            }
+                         </div>
+                      </div>
+                   } @else {
+                      <div class="esperando-oponente">
+                         <div class="spinner"></div>
+                         <p>Esperando a que tu oponente elija la primera cancin...</p>
+                      </div>
+                   }
+                } @else if (combateActivo().rondas?.length === 1) {
+                   <!-- Fin de ronda 1, Jugador 2 elige ronda 2 -->
+                   @if (combateActivo().id_usuario_jugador2 == usuario().id) {
+                      <div class="selector-cancion">
+                         <h4>Es tu turno de elegir la cancin de la Ronda 2!</h4>
+                         <div class="canciones-grid">
+                            @for (c of canciones(); track c.id) {
+                               <div class="cancion-card" (click)="crearRondaNueva(c.id)">
+                                  {{ c.titulo }}
+                               </div>
+                            }
+                         </div>
+                      </div>
+                   } @else {
+                      <div class="esperando-oponente">
+                         <div class="spinner"></div>
+                         <p>Esperando a que tu oponente elija la cancin de la Ronda 2...</p>
+                      </div>
+                   }
+                } @else {
+                   <div class="esperando-oponente">
+                      <div class="spinner"></div>
+                      <p>Calculando resultados del combate...</p>
+                   </div>
+                }
+             }
           </div>
         </div>
+    }
+
+    <!-- VISTA 4: Resultado de la Ronda -->
+    @if (vistaActual() === 'resultado_ronda') {
+      <div class="resultado-ronda-card slide-in">
+         <h2 class="title-gradient text-center">🏆 ¡Ronda {{ rondaResultadoActiva()?.numero_ronda }} Finalizada!</h2>
+         <h3 class="text-center text-muted">{{ rondaResultadoActiva()?.cancion?.titulo }}</h3>
+         
+         <div class="vs-resultado">
+            <!-- Jugador 1 -->
+            <div class="jugador-res" [class.winner-glow]="rondaResultadoActiva()?.id_usuario_ganador == combateActivo().jugador1.id">
+               <div class="fighter-avatar p1-bg">
+                 {{ combateActivo()?.jugador1?.nombre?.substring(0,1)?.toUpperCase() }}
+               </div>
+               <h4>{{ combateActivo()?.jugador1?.nombre }}</h4>
+               <div class="puntaje-box p1-color">
+                  {{ rondaResultadoActiva()?.turnos[0]?.id_usuario == combateActivo().jugador1.id ? rondaResultadoActiva()?.turnos[0]?.puntaje : rondaResultadoActiva()?.turnos[1]?.puntaje }}
+               </div>
+            </div>
+
+            <div class="vs-texto">VS</div>
+
+            <!-- Jugador 2 -->
+            <div class="jugador-res" [class.winner-glow]="rondaResultadoActiva()?.id_usuario_ganador == combateActivo().jugador2.id">
+               <div class="fighter-avatar p2-bg">
+                 {{ combateActivo()?.jugador2?.nombre?.substring(0,1)?.toUpperCase() }}
+               </div>
+               <h4>{{ combateActivo()?.jugador2?.nombre }}</h4>
+               <div class="puntaje-box p2-color">
+                  {{ rondaResultadoActiva()?.turnos[0]?.id_usuario == combateActivo().jugador2.id ? rondaResultadoActiva()?.turnos[0]?.puntaje : rondaResultadoActiva()?.turnos[1]?.puntaje }}
+               </div>
+            </div>
+         </div>
+
+         <div class="ganador-anuncio text-center mt-4">
+            @if (rondaResultadoActiva()?.id_usuario_ganador == usuario().id) {
+               <h2 class="text-success pulse-anim">¡GANASTE ESTA RONDA! 🎉</h2>
+            } @else if (rondaResultadoActiva()?.id_usuario_ganador) {
+               <h2 class="text-danger">Ganó tu oponente 😢</h2>
+            } @else {
+               <h2 class="text-warning">¡Empate! 🤝</h2>
+            }
+         </div>
+
+         <button class="btn-primary mt-4" (click)="avanzarSiguienteRonda()">Continuar ➔</button>
+      </div>
+    }
+
+    <!-- VISTA 5: Victoria Final -->
+    @if (vistaActual() === 'victoria_final') {
+      <div class="victoria-card scale-in">
+         <div class="trophy-container bounce-anim">🏆</div>
+         
+         @if (combateActivo().id_usuario_ganador == usuario().id) {
+            <h1 class="title-gradient text-center glow-text">¡VICTORIA ÉPICA!</h1>
+            <p class="text-center text-muted mb-4">Has dominado la arena y vencido a tu rival.</p>
+         } @else if (combateActivo().id_usuario_ganador) {
+            <h1 class="text-danger text-center">DERROTA...</h1>
+            <p class="text-center text-muted mb-4">La arena pertenece hoy a tu rival. ¡Sigue practicando!</p>
+         } @else {
+            <h1 class="text-warning text-center">¡EMPATE LEGENDARIO!</h1>
+            <p class="text-center text-muted mb-4">Ambos demostraron ser dignos de la arena.</p>
+         }
+
+         <div class="resumen-rondas">
+            <h3>Resumen del Combate</h3>
+            @for (r of combateActivo().rondas; track r.id) {
+               <div class="ronda-resumen-item" [class.ganada]="r.id_usuario_ganador == usuario().id" [class.perdida]="r.id_usuario_ganador && r.id_usuario_ganador != usuario().id">
+                  <span>Ronda {{ r.numero_ronda }}</span>
+                  <span class="cancion-nombre">{{ r.cancion?.titulo }}</span>
+                  <span class="resultado-badge">
+                     {{ r.id_usuario_ganador == usuario().id ? 'Victoria' : (r.id_usuario_ganador ? 'Derrota' : 'Empate') }}
+                  </span>
+               </div>
+            }
+         </div>
+
+         <button class="btn-secondary mt-4" (click)="volverAlMenu()">← Volver al Menú</button>
       </div>
     }
 

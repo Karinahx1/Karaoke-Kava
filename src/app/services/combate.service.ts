@@ -43,6 +43,13 @@ export class CombateService {
     return res.json();
   }
 
+  async rechazarCombate(idCombate: string) {
+    const res = await fetch(`${this.apiUrl}/${idCombate}/rechazar`, {
+      method: 'DELETE'
+    });
+    return res.json();
+  }
+
   async obtenerMisCombates(idUsuario: string) {
     const res = await fetch(`${this.apiUrl}/usuario/${idUsuario}`);
     return res.json();

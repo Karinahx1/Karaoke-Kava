@@ -401,7 +401,449 @@
   text-shadow: 0 0 10px rgba(244, 63, 94, 0.4);
 }
 
-.arena-content { margin-top: 20px; }
+/* === RONDA HEADER === */
+.ronda-header {
+  text-align: center;
+  margin-bottom: 20px;
+  padding: 14px 20px;
+  background: rgba(124, 58, 237, 0.1);
+  border: 1px solid rgba(124, 58, 237, 0.25);
+  border-radius: 14px;
+}
+.ronda-header h3 { margin: 0 0 4px 0; font-size: 1.3rem; }
+.ronda-header p { margin: 0; color: #94a3b8; font-size: 0.9rem; }
+
+/* === SELECTOR DE CANCION === */
+.selector-cancion h4 {
+  color: #c4b5fd;
+  margin-bottom: 16px;
+  font-size: 1.1rem;
+}
+
+.canciones-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.cancion-card {
+  padding: 14px 16px;
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+  font-weight: 600;
+}
+.cancion-card:hover {
+  background: rgba(124, 58, 237, 0.2);
+  border-color: rgba(124, 58, 237, 0.5);
+  transform: translateY(-2px);
+}
+
+/* === ESPERANDO OPONENTE === */
+.esperando-oponente {
+  text-align: center;
+  padding: 30px 0;
+  color: #64748b;
+}
+.esperando-oponente.mt-3 { margin-top: 16px; }
+
+/* === TURNO COMPLETADO === */
+.turno-completado {
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 14px;
+  padding: 24px;
+  text-align: center;
+}
+.turno-completado h4 {
+  color: #34d399;
+  margin: 0 0 8px 0;
+  font-size: 1.2rem;
+}
+
+/* ====== GRABADORA ARENA ====== */
+.grabadora-arena {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid rgba(124, 58, 237, 0.3);
+  box-shadow: 0 8px 40px rgba(124, 58, 237, 0.15);
+}
+
+/* Video container — ocupa casi toda la pantalla */
+.video-container {
+  width: 100%;
+  position: relative;
+  background: #000;
+  aspect-ratio: 16 / 9;
+}
+
+.karaoke-iframe {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0; left: 0;
+  border: none;
+}
+
+.video-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: #475569;
+  background: #0a0f1e;
+}
+.video-placeholder span { font-size: 3rem; }
+
+/* Barra info de canción */
+.cancion-info-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 20px;
+  background: rgba(15, 23, 42, 0.95);
+  border-top: 1px solid rgba(124, 58, 237, 0.2);
+}
+
+.cancion-icon { font-size: 1.5rem; }
+
+.cancion-nombre-arena {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #e2e8f0;
+}
+
+.cancion-artista {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+/* Controles de grabación */
+.controles-grabacion {
+  background: rgba(15, 23, 42, 0.98);
+  padding: 20px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+/* Botón iniciar turno — grande y vistoso */
+.btn-iniciar-turno {
+  width: 100%;
+  padding: 18px;
+  background: linear-gradient(135deg, #7c3aed, #2563eb);
+  border: none;
+  border-radius: 14px;
+  color: white;
+  font-size: 1.15rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  letter-spacing: 0.5px;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 20px rgba(124, 58, 237, 0.4);
+}
+.btn-iniciar-turno:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 30px rgba(124, 58, 237, 0.6);
+}
+.mic-icon { font-size: 1.4rem; }
+
+/* Panel cuando ya está grabando */
+.grabando-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+/* Indicador GRABANDO rojo pulsante */
+.grabando-indicator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #f87171;
+  letter-spacing: 1.5px;
+}
+
+.pulse-dot {
+  width: 14px;
+  height: 14px;
+  background: #ef4444;
+  border-radius: 50%;
+  animation: pulseDot 1s infinite;
+}
+
+@keyframes pulseDot {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.5); opacity: 0.5; }
+}
+
+/* Visualizador de onda */
+.visualizador-onda {
+  width: 100%;
+  max-width: 500px;
+  height: 80px;
+  border-radius: 10px;
+  background: rgba(0,0,0,0.3);
+}
+
+/* Botón detener — rojo llamativo */
+.btn-detener-turno {
+  width: 100%;
+  padding: 15px;
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  border: none;
+  border-radius: 14px;
+  color: white;
+  font-size: 1.05rem;
+  font-weight: 800;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 20px rgba(220, 38, 38, 0.4);
+  animation: pulseRed 2s infinite;
+}
+.btn-detener-turno:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(220, 38, 38, 0.6);
+}
+
+@keyframes pulseRed {
+  0%, 100% { box-shadow: 0 4px 20px rgba(220, 38, 38, 0.4); }
+  50% { box-shadow: 0 4px 30px rgba(220, 38, 38, 0.7); }
+}
+
+/* Countdown grande */
+.countdown-big {
+  text-align: center;
+  padding: 10px;
+}
+
+.countdown-number {
+  font-size: 5rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: countPulse 1s infinite;
+  line-height: 1;
+}
+
+@keyframes countPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
+
+.countdown-label {
+  font-size: 1rem;
+  color: #94a3b8;
+  margin-top: 8px;
+  font-weight: 600;
+}
+
+/* === PANTALLAS DE RESULTADO Y VICTORIA === */
+.resultado-ronda-card, .victoria-card {
+  width: 100%;
+  max-width: 680px;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 24px;
+  padding: 40px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(20px);
+  text-align: center;
+}
+
+.vs-resultado {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 40px;
+  margin: 30px 0;
+}
+
+.jugador-res {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 20px;
+  border-radius: 20px;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+}
+
+.winner-glow {
+  border-color: rgba(250, 204, 21, 0.5);
+  box-shadow: 0 0 30px rgba(250, 204, 21, 0.2);
+  background: rgba(250, 204, 21, 0.05);
+  transform: scale(1.05);
+}
+
+.puntaje-box {
+  font-size: 2.5rem;
+  font-weight: 900;
+  text-shadow: 0 0 15px rgba(255,255,255,0.2);
+}
+
+.vs-texto {
+  font-size: 1.5rem;
+  color: #64748b;
+  font-weight: bold;
+}
+
+/* === VICTORIA FINAL ÉPICA === */
+.victoria-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.victoria-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(250, 204, 21, 0.08), transparent 40%),
+    radial-gradient(circle at 80% 80%, rgba(124, 58, 237, 0.1), transparent 40%);
+  pointer-events: none;
+}
+
+.trophy-container {
+  font-size: 6rem;
+  margin-bottom: 20px;
+  text-shadow: 0 0 40px rgba(250, 204, 21, 0.5);
+  filter: drop-shadow(0 0 20px rgba(250, 204, 21, 0.4));
+}
+
+.resumen-rondas {
+  margin-top: 30px;
+  text-align: left;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 20px;
+  border-radius: 16px;
+}
+
+.ronda-resumen-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-radius: 10px;
+  margin-bottom: 8px;
+  border: 1px solid transparent;
+}
+.ronda-resumen-item:last-child { margin-bottom: 0; }
+.ronda-resumen-item.ganada {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.2);
+}
+.ronda-resumen-item.perdida {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.15);
+}
+
+.cancion-nombre { color: #94a3b8; font-size: 0.9rem; }
+
+.resultado-badge {
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+.ganada .resultado-badge { color: #34d399; background: rgba(16, 185, 129, 0.15); }
+.perdida .resultado-badge { color: #f87171; background: rgba(239, 68, 68, 0.15); }
+
+/* === COUNTDOWN OVERLAY (compatibilidad) === */
+.countdown-overlay {
+  text-align: center;
+  padding: 10px;
+}
+.countdown-overlay span {
+  font-size: 5rem;
+  font-weight: 900;
+  color: #fbbf24;
+  animation: countPulse 1s infinite;
+  display: block;
+}
+
+/* === ANIMACIONES === */
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.slide-in { animation: slideIn 0.5s ease-out forwards; }
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.85); }
+  to { opacity: 1; transform: scale(1); }
+}
+.scale-in { animation: scaleIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+
+@keyframes pulseAnim {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+.pulse-anim { animation: pulseAnim 2s infinite; }
+
+@keyframes bounceAnim {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-20px); }
+}
+.bounce-anim { animation: bounceAnim 1.8s infinite ease-in-out; }
+
+.glow-text {
+  color: #fbbf24;
+  text-shadow: 0 0 20px rgba(250, 204, 21, 0.5), 0 0 40px rgba(250, 204, 21, 0.2);
+}
+
+.text-success { color: #34d399; }
+.text-danger  { color: #f87171; }
+.text-warning { color: #fbbf24; }
+.mb-4 { margin-bottom: 1.5rem; }
+.mt-4 { margin-top: 1.5rem; }
+
+.animated-pulse { animation: pulseRed 1.5s infinite; }
+
+/* === BADGE RESULTADO === */
+.badge-resultado {
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: rgba(16, 185, 129, 0.1);
+  color: #34d399;
+}
+
+/* === RESPONSIVE === */
+@media (max-width: 600px) {
+  .combates-card, .arena-card, .resultado-ronda-card, .victoria-card { padding: 20px 14px; }
+  .title-gradient { font-size: 1.4rem; }
+  .input-group { flex-direction: column; }
+  .btn-invite { padding: 14px; }
+  .vs-resultado { gap: 14px; flex-wrap: wrap; }
+  .canciones-grid { grid-template-columns: 1fr; }
+  .trophy-container { font-size: 4rem; }
+  .countdown-number { font-size: 3.5rem; }
+  .video-container { aspect-ratio: 4 / 3; }
+}
+
 
 .arena-placeholder {
   text-align: center;
@@ -412,10 +854,173 @@
 }
 .arena-placeholder span { font-size: 3rem; display: block; margin-bottom: 12px; }
 
+/* === INVITACIONES PENDIENTES === */
+.invitaciones-section {
+  margin-bottom: 24px;
+}
+
+.invitaciones-section h2 {
+  font-size: 1.1rem;
+  color: #f59e0b;
+  margin: 0 0 14px 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.invitacion-destacada {
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.invitacion-destacada:hover {
+  border-color: rgba(245, 158, 11, 0.6);
+}
+
+.btn-danger-small {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #f87171;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background 0.2s;
+}
+
+.btn-danger-small:hover {
+  background: rgba(239, 68, 68, 0.3);
+}
+
+/* === PANTALLAS DE RESULTADO Y VICTORIA === */
+.resultado-ronda-card, .victoria-card {
+  width: 100%;
+  max-width: 680px;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 24px;
+  padding: 40px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(20px);
+  text-align: center;
+}
+
+.vs-resultado {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 40px;
+  margin: 30px 0;
+}
+
+.jugador-res {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 20px;
+  border-radius: 20px;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+}
+
+.winner-glow {
+  border-color: rgba(250, 204, 21, 0.5);
+  box-shadow: 0 0 30px rgba(250, 204, 21, 0.2);
+  background: rgba(250, 204, 21, 0.05);
+  transform: scale(1.05);
+}
+
+.puntaje-box {
+  font-size: 2.5rem;
+  font-weight: 900;
+  text-shadow: 0 0 15px rgba(255,255,255,0.2);
+}
+
+.vs-texto {
+  font-size: 1.5rem;
+  color: #64748b;
+  font-weight: bold;
+}
+
+.trophy-container {
+  font-size: 5rem;
+  margin-bottom: 20px;
+  text-shadow: 0 0 40px rgba(250, 204, 21, 0.5);
+}
+
+.resumen-rondas {
+  margin-top: 30px;
+  text-align: left;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 20px;
+  border-radius: 16px;
+}
+
+.ronda-resumen-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.ronda-resumen-item:last-child { border-bottom: none; }
+.ronda-resumen-item.ganada { background: rgba(16, 185, 129, 0.1); }
+.ronda-resumen-item.perdida { background: rgba(239, 68, 68, 0.1); }
+
+/* === COUNTDOWN OVERLAY === */
+.countdown-overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(15, 23, 42, 0.85);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  border-radius: 12px;
+}
+.countdown-overlay span {
+  font-size: 5rem;
+  font-weight: 900;
+  color: #fbbf24;
+  animation: pulse 1s infinite;
+}
+
+/* === ANIMACIONES === */
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.slide-in { animation: slideIn 0.5s ease-out forwards; }
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+.scale-in { animation: scaleIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+
+@keyframes pulseAnim {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+.pulse-anim { animation: pulseAnim 2s infinite; }
+
+@keyframes bounceAnim {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-15px); }
+}
+.bounce-anim { animation: bounceAnim 2s infinite ease-in-out; }
+
+.glow-text {
+  color: #fbbf24;
+  text-shadow: 0 0 10px rgba(250, 204, 21, 0.4), 0 0 20px rgba(250, 204, 21, 0.2);
+}
+
 /* === RESPONSIVE === */
 @media (max-width: 600px) {
-  .combates-card, .arena-card { padding: 24px 18px; }
+  .combates-card, .arena-card, .resultado-ronda-card, .victoria-card { padding: 24px 18px; }
   .title-gradient { font-size: 1.6rem; }
   .input-group { flex-direction: column; }
   .btn-invite { padding: 14px; }
+  .vs-resultado { gap: 10px; }
 }
