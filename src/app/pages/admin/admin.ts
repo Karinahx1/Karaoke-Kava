@@ -184,6 +184,9 @@ export class AdminPage implements OnInit {
   }
 
   editarCancion(cancion: any) {
+    // Limpiar errores de cualquier validación previa antes de abrir el modal
+    this.errores = {};
+
     this.editando.set(true);
     this.modalAbierto.set(true);
     this.idEditando.set(cancion.id);
@@ -197,7 +200,7 @@ export class AdminPage implements OnInit {
   }
 
   async eliminarCancion(id: number) {
-    const confirmar = confirm('¿Seguro que deseas eliminar esta canción?');
+    const confirmar = confirm('¿Seguro que deseas eliminar esta canción? Esta acción no se puede deshacer.');
     if (!confirmar) return;
 
     try {
@@ -206,7 +209,8 @@ export class AdminPage implements OnInit {
       await this.cargarCanciones();
     } catch (error: any) {
       console.error('Error al eliminar canción:', error);
-      alert('Error al eliminar canción: ' + error.message);
+      // El backend devuelve un mensaje claro cuando la canción está en uso
+      alert('⚠️ No se pudo eliminar la canción.\n\n' + error.message);
     }
   }
 
