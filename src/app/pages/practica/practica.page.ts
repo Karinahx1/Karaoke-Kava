@@ -513,14 +513,19 @@ export class PracticaPage implements OnInit {
    * Si el efecto de estudio está activo, aplica eco/reverb en tiempo real.
    */
   async iniciarGrabacion() {
-    // Usamos { audio: true } en todos los dispositivos.
-    // Las pausas del video en móvil las evitan otros mecanismos:
-    //   - No se crea AudioContext durante la grabación (ver esMobile check más abajo)
-    //   - SpeechRecognition no se reinicia en móvil (ver iniciarReconocimiento)
-    // Forzar { echoCancellation: false, autoGainControl: false } en móvil
-    // causaba dos problemas: SpeechRecognition fallaba con audio-capture error
-    // y el RMS era casi cero (sin AGC, la señal es demasiado débil).
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    // En móvil desactivamos el procesado de voz del navegador (cancelación de eco,
+    // supresión de ruido y control automático de ganancia). Esos filtros están
+    // pensados para llamadas, no para cantar: degradan la calidad de la grabación.
+    // Con ellos desactivados la voz se graba más natural y fiel.
+    //
+    // En móvil la transcripción NO depende del navegador (SpeechRecognition no
+    // puede compartir el micrófono con MediaRecorder en Android), sino que el
+    // backend transcribe el audio subido con Gemini. Por eso aquí priorizamos
+    // la calidad del audio grabado.
+    const audioConstraints: MediaTrackConstraints | boolean = this.esMobile()
+      ? { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+      : true;
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
 
     let streamParaGrabar = stream;
 
