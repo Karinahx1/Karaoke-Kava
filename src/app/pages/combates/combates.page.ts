@@ -390,16 +390,13 @@ export class CombatesPage implements OnInit, OnDestroy {
     const combate = this.combateActivo();
     if (!combate) return;
 
-    // Si el combate terminó, detener polling y mostrar victoria
-    if (combate.id_estado === 4) {
-      if (this.intervaloPolling) clearInterval(this.intervaloPolling);
-      this.vistaActual.set('victoria_final');
-      return;
-    }
-
     const rondas = combate.rondas || [];
 
-    // Verificar si hay alguna ronda que acaba de terminar y no hemos visto
+    // Primero: mostrar resultados de rondas que el usuario aún no ha visto.
+    // Esto debe ocurrir ANTES de revisar si el combate terminó, porque el backend
+    // cierra el combate (id_estado=4) en el mismo instante en que termina la última
+    // ronda, y si revisáramos el estado del combate primero saltaríamos directo a
+    // victoria_final sin mostrar el resultado de esa ronda.
     const rondasCompletadas = rondas.filter((r: any) => r.id_estado === 2);
     for (const ronda of rondasCompletadas) {
       if (!this.rondasVistas.has(ronda.id.toString())) {
@@ -407,6 +404,13 @@ export class CombatesPage implements OnInit, OnDestroy {
         this.vistaActual.set('resultado_ronda');
         return;
       }
+    }
+
+    // Segundo: si todas las rondas ya se mostraron y el combate terminó → victoria final
+    if (combate.id_estado === 4) {
+      if (this.intervaloPolling) clearInterval(this.intervaloPolling);
+      this.vistaActual.set('victoria_final');
+      return;
     }
 
     // Si llegamos aquí, mostramos la arena normal
