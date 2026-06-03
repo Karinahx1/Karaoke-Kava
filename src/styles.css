@@ -1,1 +1,50 @@
-/* You can add global styles to this file, and also import other style files */
+/* ═══════════════════════════════════════════
+   ESTILOS GLOBALES — Karaoke Kava
+   ═══════════════════════════════════════════ */
+
+/* ── Fuente global ── */
+* {
+  font-family: 'Inter', Arial, sans-serif;
+  box-sizing: border-box;
+}
+
+/* ── Reset mínimo ── */
+body {
+  margin: 0;
+  padding: 0;
+  background: #020617;
+  color: white;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Scrollbar personalizado (Chrome / Edge) ── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a0f1e;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(124, 58, 237, 0.45);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(124, 58, 237, 0.75);
+}
+
+/* Scrollbar Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(124, 58, 237, 0.45) #0a0f1e;
+}
+
+/* ── Color de selección de texto ── */
+::selection {
+  background: rgba(124, 58, 237, 0.35);
+  color: white;
+}

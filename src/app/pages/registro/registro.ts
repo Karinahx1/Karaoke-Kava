@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { ToastService } from '../../services/toast.service';
 import { supabase } from '../../core/supabase.client';
@@ -8,7 +8,7 @@ import { supabase } from '../../core/supabase.client';
 @Component({
   selector: 'app-registro',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, RouterLink],
   templateUrl: './registro.html',
   styleUrl: './registro.css'
 })

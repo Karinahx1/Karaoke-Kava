@@ -1,28 +1,154 @@
-<div class="inicio-container">
+<div class="landing">
 
-  <section class="inicio-card">
+  <!-- ── NAVBAR ── -->
+  <nav class="navbar">
+    <div class="nav-brand">
+      <span class="nav-icon">🎤</span>
+      <span class="nav-logo">Karaoke Kava</span>
+    </div>
+    <div class="nav-actions">
+      <button class="btn-nav-outline" (click)="irLogin()">Iniciar sesión</button>
+      <button class="btn-nav-solid" (click)="irRegistro()">Registrarse</button>
+    </div>
+  </nav>
 
-    <div class="icono">
-      🎤
+  <!-- ── HERO ── -->
+  <section class="hero">
+    <div class="hero-orb orb-1"></div>
+    <div class="hero-orb orb-2"></div>
+    <div class="hero-orb orb-3"></div>
+
+    <div class="hero-content">
+      <div class="hero-badge">🎵 Karaoke gamificado con IA</div>
+
+      <h1 class="hero-title">
+        Canta. Compite.<br>
+        <span class="gradient-text">Domina la arena.</span>
+      </h1>
+
+      <p class="hero-subtitle">
+        Practica tus canciones favoritas, recibe feedback real de inteligencia artificial
+        y desafía a otros cantantes en combates 1 a 1. ¿Tienes el nivel?
+      </p>
+
+      <div class="hero-ctas">
+        <button class="btn-hero-primary" (click)="irRegistro()">
+          Empezar gratis
+          <span class="btn-arrow">→</span>
+        </button>
+        <button class="btn-hero-ghost" (click)="irLogin()">
+          Ya tengo cuenta
+        </button>
+      </div>
+
+      <div class="hero-stats">
+        <div class="stat">
+          <span class="stat-num">IA</span>
+          <span class="stat-label">Evaluación real</span>
+        </div>
+        <div class="stat-sep"></div>
+        <div class="stat">
+          <span class="stat-num">1v1</span>
+          <span class="stat-label">Combates en vivo</span>
+        </div>
+        <div class="stat-sep"></div>
+        <div class="stat">
+          <span class="stat-num">3</span>
+          <span class="stat-label">Niveles</span>
+        </div>
+      </div>
     </div>
 
-    <h1>Karaoke Kava</h1>
-
-    <p class="descripcion">
-      Practica tus canciones favoritas, graba tu interpretación
-      y recibe una evaluación de tu desempeño.
-    </p>
-
-    <div class="acciones">
-      <button class="btn btn-login" (click)="irLogin()">
-        Iniciar sesión
-      </button>
-
-      <button class="btn btn-registro" (click)="irRegistro()">
-        Registrarse
-      </button>
+    <!-- Visual decorativo -->
+    <div class="hero-visual">
+      <div class="mic-card">
+        <div class="mic-icon">🎤</div>
+        <div class="mic-waves">
+          <span></span><span></span><span></span><span></span><span></span>
+        </div>
+        <div class="mic-score">
+          <span class="score-label">Puntaje</span>
+          <span class="score-num">87</span>
+        </div>
+      </div>
+      <div class="floating-badge badge-top">⚔️ Combate activo</div>
+      <div class="floating-badge badge-bot">🏆 +15 pts ganados</div>
     </div>
-
   </section>
+
+  <!-- ── FEATURES ── -->
+  <section class="features">
+    <h2 class="section-title">Todo lo que necesitas para cantar mejor</h2>
+    <p class="section-sub">Una plataforma completa con práctica, competencia y comunidad.</p>
+
+    <div class="features-grid">
+
+      <div class="feature-card">
+        <div class="feature-icon">🎤</div>
+        <h3>Practica con IA</h3>
+        <p>Canta cualquier canción del catálogo y recibe una evaluación detallada: precisión de letra, potencia vocal y continuidad. La IA te dice exactamente en qué mejorar.</p>
+      </div>
+
+      <div class="feature-card featured">
+        <div class="feature-badge">Popular</div>
+        <div class="feature-icon">⚔️</div>
+        <h3>Combates 1v1</h3>
+        <p>Reta a un amigo o busca un rival de tu nivel. Tres rondas, cada quien elige su canción. El que cante mejor gana. Sin trampa, sin margen: solo puntaje.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">🏆</div>
+        <h3>Comunidad</h3>
+        <p>Mira quién lidera el ranking, revisa las canciones más cantadas y sube de nivel con cada práctica. Tu historial completo, siempre visible.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── CÓMO FUNCIONA ── -->
+  <section class="how-it-works">
+    <h2 class="section-title">¿Cómo funciona?</h2>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <h4>Crea tu cuenta</h4>
+        <p>Regístrate con tu cuenta de Google en segundos. Sin contraseñas, sin complicaciones.</p>
+      </div>
+      <div class="step-line"></div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <h4>Practica y sube de nivel</h4>
+        <p>Elige una canción, canta y recibe tu puntaje al instante. Cuanto más practiques, mayor será tu nivel.</p>
+      </div>
+      <div class="step-line"></div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <h4>Compite y gana</h4>
+        <p>Desafía a alguien a un combate 1v1. Gana rondas, sube al ranking y demuestra quién canta mejor.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── CTA FINAL ── -->
+  <section class="cta-final">
+    <div class="cta-orb"></div>
+    <h2>¿Listo para subir al escenario?</h2>
+    <p>Únete ahora y empieza a cantar. Es gratis.</p>
+    <button class="btn-hero-primary large" (click)="irRegistro()">
+      Crear cuenta con Google
+      <span class="btn-arrow">→</span>
+    </button>
+    <p class="cta-login-link">
+      ¿Ya tienes cuenta?
+      <button class="link-btn" (click)="irLogin()">Inicia sesión aquí</button>
+    </p>
+  </section>
+
+  <!-- ── FOOTER ── -->
+  <footer class="footer">
+    <span class="footer-logo">🎤 Karaoke Kava</span>
+    <span class="footer-copy">© 2025 · Hecho con 🎵</span>
+  </footer>
 
 </div>

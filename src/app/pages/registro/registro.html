@@ -1,111 +1,148 @@
-<div class="auth-container">
-  <section class="auth-card">
-    <button class="btn-volver" (click)="volverInicio()">← Volver</button>
+<div class="auth-split">
 
-    <div class="auth-logo">
-      <span class="logo-icon">🎤</span>
+  <!-- ── PANEL IZQUIERDO (marca) ── -->
+  <div class="auth-panel-left">
+    <div class="auth-orb orb-a"></div>
+    <div class="auth-orb orb-b"></div>
+
+    <div class="panel-content">
+      <div class="panel-logo">
+        <span>🎤</span>
+        <span class="panel-brand">Karaoke Kava</span>
+      </div>
+
+      <h2 class="panel-title">
+        Únete a la<br>arena musical.
+      </h2>
+      <p class="panel-sub">
+        Crea tu perfil, elige tus canciones favoritas y empieza a competir con cantantes de todo el mundo.
+      </p>
+
+      <ul class="panel-features">
+        <li><span class="feat-icon">🚀</span> Registro en menos de un minuto</li>
+        <li><span class="feat-icon">🔒</span> Acceso seguro con Google</li>
+        <li><span class="feat-icon">🎯</span> Evaluación personalizada con IA</li>
+        <li><span class="feat-icon">⚔️</span> Combates 1v1 contra rivales reales</li>
+      </ul>
     </div>
+  </div>
 
-    <h1>Crear cuenta</h1>
-    <p class="descripcion">Completa tus datos y continúa con Google para empezar a cantar.</p>
-    @if (mensajeInfo) {
-      <div class="info-banner">
-        <span class="info-icon">ℹ️</span>
-        <span>{{ mensajeInfo }}</span>
-      </div>
-    }
-    
-    <form (ngSubmit)="registrarse()">
+  <!-- ── PANEL DERECHO (formulario) ── -->
+  <div class="auth-panel-right">
+    <div class="auth-form-wrap">
 
-      <div class="form-group">
-        <label for="reg-nombre">Nombre</label>
-        <input
-          id="reg-nombre"
-          type="text"
-          name="nombre"
-          [(ngModel)]="nombre"
-          placeholder="Tu nombre"
-          maxlength="50"
-          required
-          [class.input-error]="errorNombre"
-        />
-        @if (errorNombre) {
-          <span class="error-msg">{{ errorNombre }}</span>
-        }
+      <button class="btn-volver" type="button" (click)="volverInicio()">← Volver</button>
+
+      <div class="auth-logo">
+        <span class="logo-icon">🎤</span>
       </div>
 
-      <div class="form-group">
-        <label for="reg-apellido">Apellido</label>
-        <input
-          id="reg-apellido"
-          type="text"
-          name="apellido"
-          [(ngModel)]="apellido"
-          placeholder="Tu apellido"
-          maxlength="50"
-          required
-          [class.input-error]="errorApellido"
-        />
-        @if (errorApellido) {
-          <span class="error-msg">{{ errorApellido }}</span>
-        }
-      </div>
+      <h1>Crear cuenta</h1>
+      <p class="descripcion">Completa tus datos y continúa con Google para empezar a cantar.</p>
 
-      <div class="form-group">
-        <label for="reg-documento">Número de documento</label>
-        <input
-          id="reg-documento"
-          type="text"
-          name="numDocumento"
-          [(ngModel)]="numDocumento"
-          placeholder="Solo dígitos, ej: 1234567890"
-          maxlength="15"
-          required
-          [class.input-error]="errorDocumento"
-        />
-        @if (errorDocumento) {
-          <span class="error-msg">{{ errorDocumento }}</span>
-        }
-      </div>
-
-      <div class="form-group">
-        <label for="reg-genero">Género</label>
-        <div class="select-wrapper">
-          <select id="reg-genero" name="idGenero" [(ngModel)]="idGenero">
-            <option [value]="1">Femenino</option>
-            <option [value]="2">Masculino</option>
-            <option [value]="3">Otro</option>
-          </select>
-          <span class="select-arrow">▾</span>
+      @if (mensajeInfo) {
+        <div class="info-banner">
+          <span>ℹ️</span>
+          <span>{{ mensajeInfo }}</span>
         </div>
-      </div>
+      }
 
-      <div class="form-group">
-        <label for="reg-email">Correo electrónico</label>
-        <input
-          id="reg-email"
-          type="email"
-          name="email"
-          [(ngModel)]="email"
-          placeholder="Tu correo de Google"
-          required
-          [class.input-error]="errorEmail"
-        />
-        @if (errorEmail) {
-          <span class="error-msg">{{ errorEmail }}</span>
-        }
-      </div>
+      <form (ngSubmit)="registrarse()">
 
-      <button class="btn-google-register" type="submit" [disabled]="cargando">
-        <span class="google-icon">G</span>
-        <span>{{ cargando ? 'Verificando...' : 'Registrarse con Google' }}</span>
-      </button>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="reg-nombre">Nombre</label>
+            <input
+              id="reg-nombre"
+              type="text"
+              name="nombre"
+              [(ngModel)]="nombre"
+              placeholder="Tu nombre"
+              maxlength="50"
+              required
+              [class.input-error]="errorNombre"
+            />
+            @if (errorNombre) {
+              <span class="error-msg">{{ errorNombre }}</span>
+            }
+          </div>
 
-    </form>
+          <div class="form-group">
+            <label for="reg-apellido">Apellido</label>
+            <input
+              id="reg-apellido"
+              type="text"
+              name="apellido"
+              [(ngModel)]="apellido"
+              placeholder="Tu apellido"
+              maxlength="50"
+              required
+              [class.input-error]="errorApellido"
+            />
+            @if (errorApellido) {
+              <span class="error-msg">{{ errorApellido }}</span>
+            }
+          </div>
+        </div>
 
-    <p class="cambio">
-      ¿Ya tienes cuenta?
-      <button (click)="irLogin()">Inicia sesión</button>
-    </p>
-  </section>
+        <div class="form-group">
+          <label for="reg-documento">Número de documento</label>
+          <input
+            id="reg-documento"
+            type="text"
+            name="numDocumento"
+            [(ngModel)]="numDocumento"
+            placeholder="Solo dígitos, ej: 1234567890"
+            maxlength="15"
+            required
+            [class.input-error]="errorDocumento"
+          />
+          @if (errorDocumento) {
+            <span class="error-msg">{{ errorDocumento }}</span>
+          }
+        </div>
+
+        <div class="form-group">
+          <label for="reg-genero">Género</label>
+          <div class="select-wrapper">
+            <select id="reg-genero" name="idGenero" [(ngModel)]="idGenero">
+              <option [value]="1">Femenino</option>
+              <option [value]="2">Masculino</option>
+              <option [value]="3">Otro</option>
+            </select>
+            <span class="select-arrow">▾</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="reg-email">Correo electrónico</label>
+          <input
+            id="reg-email"
+            type="email"
+            name="email"
+            [(ngModel)]="email"
+            placeholder="Tu correo de Google"
+            required
+            [class.input-error]="errorEmail"
+          />
+          @if (errorEmail) {
+            <span class="error-msg">{{ errorEmail }}</span>
+          }
+        </div>
+
+        <button class="btn-google-register" type="submit" [disabled]="cargando">
+          <span class="google-icon">G</span>
+          <span>{{ cargando ? 'Verificando...' : 'Registrarse con Google' }}</span>
+        </button>
+
+      </form>
+
+      <p class="auth-switch">
+        ¿Ya tienes cuenta?
+        <a routerLink="/login" class="auth-link">Inicia sesión aquí</a>
+      </p>
+
+    </div>
+  </div>
+
 </div>
