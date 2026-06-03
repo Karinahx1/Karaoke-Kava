@@ -93,6 +93,17 @@ export class CombatesPage implements OnInit, OnDestroy {
   rondaResultadoActiva = signal<any>(null); // La ronda de la que estamos mostrando resultados
   cuentaRegresiva = signal<number | null>(null);
 
+  // Filtro de estado para la lista de combates
+  filtroEstado = signal<'todos' | 'en_curso' | 'finalizado'>('todos');
+
+  get combatesFiltrados(): any[] {
+    const todos = this.misCombates();
+    const f = this.filtroEstado();
+    if (f === 'en_curso')   return todos.filter(c => c.id_estado === ESTADO_COMBATE.EN_CURSO);
+    if (f === 'finalizado') return todos.filter(c => c.id_estado === ESTADO_COMBATE.FINALIZADO);
+    return todos;
+  }
+
   // Invitaciones que YO RECIBÍ (soy jugador2, estado PENDIENTE)
   invitacionesPendientes = signal<any[]>([]);
 
@@ -942,6 +953,21 @@ export class CombatesPage implements OnInit, OnDestroy {
   getPuntajeJugador(ronda: any, idJugador: any): number | string {
     const turno = ronda?.turnos?.find((t: any) => t.id_usuario == idJugador);
     return turno?.puntaje ?? '—';
+  }
+
+  tiempoRelativo(fecha: string): string {
+    if (!fecha) return '';
+    const ahora = new Date();
+    const entonces = new Date(fecha);
+    const diffMs = ahora.getTime() - entonces.getTime();
+    const diffMin = Math.floor(diffMs / 60000);
+    const diffHoras = Math.floor(diffMin / 60);
+    const diffDias = Math.floor(diffHoras / 24);
+    if (diffMin < 1)    return 'Hace un momento';
+    if (diffMin < 60)   return `Hace ${diffMin} min`;
+    if (diffHoras < 24) return `Hace ${diffHoras}h`;
+    if (diffDias < 7)   return `Hace ${diffDias} día${diffDias > 1 ? 's' : ''}`;
+    return entonces.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
   }
 
   getResultadoRonda(ronda: any): string {

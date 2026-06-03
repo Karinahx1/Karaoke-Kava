@@ -17,12 +17,11 @@
         </header>
 
         <section class="actions-section">
-          <!-- Buscar oponente automático -->
-          <button class="btn-primary" (click)="buscarOponenteAutomatico()">
+          <!-- TODO: Buscar oponente por nivel — temporalmente oculto hasta resolver el matchmaking -->
+          <!-- <button class="btn-primary" (click)="buscarOponenteAutomatico()">
             <span>🎯</span> Buscar Oponente por Nivel
           </button>
-
-          <div class="divider"><span>o</span></div>
+          <div class="divider"><span>o</span></div> -->
 
           <!-- Invitar usuario con autocompletado -->
           <div class="invite-section">
@@ -129,17 +128,38 @@
           </section>
         }
 
-        <!-- Lista de todos los combates -->
+        <!-- Lista de combates con filtro -->
         <section class="list-section">
-          <h2>Tus Combates</h2>
-          @if (misCombates().length === 0) {
+          <div class="list-header">
+            <h2>Tus Combates</h2>
+            <!-- Filtros por estado -->
+            <div class="filtros-estado">
+              <button
+                class="filtro-btn"
+                [class.activo]="filtroEstado() === 'todos'"
+                (click)="filtroEstado.set('todos')"
+              >Todos</button>
+              <button
+                class="filtro-btn"
+                [class.activo]="filtroEstado() === 'en_curso'"
+                (click)="filtroEstado.set('en_curso')"
+              >⚔️ En curso</button>
+              <button
+                class="filtro-btn"
+                [class.activo]="filtroEstado() === 'finalizado'"
+                (click)="filtroEstado.set('finalizado')"
+              >🏆 Finalizados</button>
+            </div>
+          </div>
+
+          @if (combatesFiltrados.length === 0) {
             <div class="empty-state">
               <span>🥁</span>
-              <p>No tienes combates activos ni invitaciones pendientes.</p>
+              <p>{{ misCombates().length === 0 ? 'No tienes combates aún.' : 'No hay combates con ese filtro.' }}</p>
             </div>
           } @else {
             <div class="combates-list">
-              @for (c of misCombates(); track c.id) {
+              @for (c of combatesFiltrados; track c.id) {
                 <div class="combate-item">
                   <div class="combate-info">
                     <div class="combate-players">
@@ -147,9 +167,14 @@
                       <span class="mini-vs">vs</span>
                       <span class="p-name p2-color">{{ c.jugador2?.nombre || 'Esperando...' }}</span>
                     </div>
-                    <span class="combate-status badge-{{ c.id_estado }}">
-                      {{ c.id_estado === ESTADO_COMBATE.PENDIENTE ? '⏳ Pendiente' : c.id_estado === ESTADO_COMBATE.EN_CURSO ? '⚔️ En Curso' : c.id_estado === ESTADO_COMBATE.FINALIZADO ? '🏆 Finalizado' : 'Desconocido' }}
-                    </span>
+                    <div class="combate-meta">
+                      <span class="combate-status badge-{{ c.id_estado }}">
+                        {{ c.id_estado === ESTADO_COMBATE.EN_CURSO ? '⚔️ En Curso' : c.id_estado === ESTADO_COMBATE.FINALIZADO ? '🏆 Finalizado' : 'Desconocido' }}
+                      </span>
+                      @if (c.fecha) {
+                        <span class="combate-fecha">{{ tiempoRelativo(c.fecha) }}</span>
+                      }
+                    </div>
                   </div>
 
                   <div class="combate-actions">

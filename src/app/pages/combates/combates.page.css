@@ -253,12 +253,66 @@
 }
 
 /* === LISTA DE COMBATES === */
+.list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
 .list-section h2 {
   font-size: 1.1rem;
   color: #94a3b8;
-  margin: 0 0 14px 0;
-  padding-bottom: 8px;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  margin: 0;
+}
+
+/* Filtros por estado */
+.filtros-estado {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.filtro-btn {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #94a3b8;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.filtro-btn:hover {
+  background: rgba(255,255,255,0.1);
+  color: white;
+}
+
+.filtro-btn.activo {
+  background: rgba(124, 58, 237, 0.2);
+  border-color: rgba(124, 58, 237, 0.5);
+  color: #a78bfa;
+}
+
+/* Meta del combate (estado + fecha) */
+.combate-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.combate-fecha {
+  font-size: 0.75rem;
+  color: #475569;
 }
 
 .empty-state {
