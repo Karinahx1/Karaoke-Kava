@@ -43,6 +43,15 @@ export class CombateService {
     return res.json();
   }
 
+  async abandonarCombate(idCombate: string, idAbandonador: string) {
+    const res = await fetch(`${this.apiUrl}/${idCombate}/abandonar`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idAbandonador })
+    });
+    return res.json();
+  }
+
   async cancelarBusqueda(idCombate: string) {
     const res = await fetch(`${this.apiUrl}/${idCombate}/cancelar-busqueda`, {
       method: 'DELETE'

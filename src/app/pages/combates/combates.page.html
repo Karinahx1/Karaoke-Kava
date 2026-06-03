@@ -184,7 +184,7 @@
     @if (vistaActual() === 'arena') {
       <div class="arena-card">
         <header class="arena-header">
-          <button class="btn-back" (click)="vistaActual.set('lista')">← Salir</button>
+          <button class="btn-abandonar" (click)="abandonarCombate()">🏳️ Abandonar</button>
           <h2 class="title-gradient">⚔️ Arena Musical</h2>
           <div class="versus">
             <div class="fighter">
@@ -375,10 +375,22 @@
           </div>
         }
 
-        <div class="esperando-oponente mt-4">
-          <div class="spinner"></div>
-          <p>Esperando a que tu oponente termine de cantar...</p>
-        </div>
+        @if (!mostrarReclamarVictoria()) {
+          <div class="esperando-oponente mt-4">
+            <div class="spinner"></div>
+            <p>Esperando a que tu oponente termine de cantar...</p>
+            @if (minutosEsperando() > 0) {
+              <span class="tiempo-espera">{{ minutosEsperando() }} min esperando</span>
+            }
+          </div>
+        } @else {
+          <div class="timeout-panel mt-4">
+            <p class="timeout-msg">⏰ Tu oponente lleva más de {{ MINUTOS_TIMEOUT }} minutos sin cantar.</p>
+            <button class="btn-reclamar" (click)="reclamarVictoriaPorAbandono()">
+              🏆 Reclamar victoria por abandono
+            </button>
+          </div>
+        }
       </div>
     }
 
@@ -461,12 +473,13 @@
          <div class="resumen-rondas">
             <h3>Resumen del Combate</h3>
             @for (r of combateActivo().rondas; track r.id) {
-               <div class="ronda-resumen-item" [class.ganada]="r.id_usuario_ganador == usuario().id" [class.perdida]="r.id_usuario_ganador && r.id_usuario_ganador != usuario().id">
+               <div class="ronda-resumen-item"
+                 [class.ganada]="r.id_usuario_ganador == usuario().id"
+                 [class.perdida]="r.id_usuario_ganador && r.id_usuario_ganador != usuario().id"
+                 [class.abandono]="!r.id_usuario_ganador && (r.turnos?.length ?? 0) < 2">
                   <span>Ronda {{ r.numero_ronda }}</span>
                   <span class="cancion-nombre">{{ r.cancion?.titulo }}</span>
-                  <span class="resultado-badge">
-                     {{ r.id_usuario_ganador == usuario().id ? 'Victoria' : (r.id_usuario_ganador ? 'Derrota' : 'Empate') }}
-                  </span>
+                  <span class="resultado-badge">{{ getResultadoRonda(r) }}</span>
                </div>
             }
          </div>

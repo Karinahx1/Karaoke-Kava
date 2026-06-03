@@ -750,6 +750,63 @@
   text-align: center;
 }
 
+/* === BOTÓN ABANDONAR === */
+.btn-abandonar {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #f87171;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-abandonar:hover {
+  background: rgba(239, 68, 68, 0.25);
+}
+
+/* === TIMEOUT / RECLAMAR VICTORIA === */
+.tiempo-espera {
+  display: block;
+  font-size: 0.78rem;
+  color: #f59e0b;
+  margin-top: 6px;
+}
+
+.timeout-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 16px;
+  padding: 24px;
+}
+
+.timeout-msg {
+  color: #fca5a5;
+  font-size: 0.95rem;
+  text-align: center;
+  margin: 0;
+}
+
+.btn-reclamar {
+  background: linear-gradient(135deg, #facc15, #f59e0b);
+  color: #0f172a;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-weight: 800;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.btn-reclamar:hover { transform: translateY(-2px); }
+
 /* === MARCADOR GLOBAL === */
 .marcador-global {
   display: flex;
@@ -844,6 +901,7 @@
 }
 .ganada .resultado-badge { color: #34d399; background: rgba(16, 185, 129, 0.15); }
 .perdida .resultado-badge { color: #f87171; background: rgba(239, 68, 68, 0.15); }
+.abandono .resultado-badge { color: #94a3b8; background: rgba(148, 163, 184, 0.12); }
 
 /* === COUNTDOWN OVERLAY (compatibilidad) === */
 .countdown-overlay {

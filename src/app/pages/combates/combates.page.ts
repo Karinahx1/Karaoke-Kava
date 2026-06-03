@@ -79,6 +79,12 @@ export class CombatesPage implements OnInit, OnDestroy {
   // Resultado personal del turno que acabo de cantar
   miResultadoTurno = signal<{ puntaje: number; feedback: string } | null>(null);
 
+  // Timeout de inactividad del oponente
+  private tiempoFinMiTurno: number | null = null;   // timestamp cuando terminé de cantar
+  minutosEsperando = signal(0);                      // minutos transcurridos esperando
+  mostrarReclamarVictoria = signal(false);           // después de 10 min sin respuesta
+  readonly MINUTOS_TIMEOUT = 10;
+
   misCombates = signal<any[]>([]);
   combateActivo = signal<any>(null);
   
@@ -415,6 +421,9 @@ export class CombatesPage implements OnInit, OnDestroy {
     this.turnoActual.set(null);
     this.grabando.set(false);
     this.miResultadoTurno.set(null);
+    this.tiempoFinMiTurno = null;
+    this.minutosEsperando.set(0);
+    this.mostrarReclamarVictoria.set(false);
     
     try {
       const res = await this.combateService.obtenerDetalleCombate(idCombate);
@@ -448,9 +457,29 @@ export class CombatesPage implements OnInit, OnDestroy {
       if (res.ok) {
         this.combateActivo.set(res.data);
         this.evaluarEstadoArena();
+        this.verificarTimeoutOponente();
       }
     } catch (e) {
       console.error('Error en polling', e);
+    }
+  }
+
+  private verificarTimeoutOponente() {
+    // Solo aplica cuando yo ya canté y el oponente no ha respondido
+    if (!this.tiempoFinMiTurno) return;
+    if (this.oponenteYaCanto()) {
+      // El oponente ya cantó — limpiar el contador
+      this.tiempoFinMiTurno = null;
+      this.minutosEsperando.set(0);
+      this.mostrarReclamarVictoria.set(false);
+      return;
+    }
+
+    const minutos = Math.floor((Date.now() - this.tiempoFinMiTurno) / 60000);
+    this.minutosEsperando.set(minutos);
+
+    if (minutos >= this.MINUTOS_TIMEOUT) {
+      this.mostrarReclamarVictoria.set(true);
     }
   }
 
@@ -467,8 +496,15 @@ export class CombatesPage implements OnInit, OnDestroy {
       (r: any) => !this.rondasVistas.has(r.id.toString())
     );
 
-    // Si estamos en 'mi_resultado_turno', solo avanzamos cuando la ronda cierra
+    // Si estamos en 'mi_resultado_turno', solo avanzamos si la ronda cerró o el combate terminó
     if (this.vistaActual() === 'mi_resultado_turno') {
+      // Combate terminado por abandono o fin normal → ir a victoria final
+      if (combate.id_estado === ESTADO_COMBATE.FINALIZADO) {
+        if (this.intervaloPolling) clearInterval(this.intervaloPolling);
+        this.vistaActual.set('victoria_final');
+        return;
+      }
+      // Ronda cerrada (ambos cantaron) → mostrar resultado de ronda
       if (rondasPendientesDeVer.length > 0) {
         this.rondaResultadoActiva.set(rondasPendientesDeVer[0]);
         this.vistaActual.set('resultado_ronda');
@@ -542,6 +578,9 @@ export class CombatesPage implements OnInit, OnDestroy {
     this.turnoActual.set(null);
     this.oponenteYaCanto.set(false);
     this.miResultadoTurno.set(null);
+    this.tiempoFinMiTurno = null;
+    this.minutosEsperando.set(0);
+    this.mostrarReclamarVictoria.set(false);
 
     await this.actualizarArena();
 
@@ -885,6 +924,8 @@ export class CombatesPage implements OnInit, OnDestroy {
           feedback: resultado.feedback
         });
         this.vistaActual.set('mi_resultado_turno');
+        // Iniciar contador de espera del oponente (para timeout)
+        this.tiempoFinMiTurno = Date.now();
       }
 
       // Actualizar arena en background — si el oponente ya cantó, la ronda se cerrará
@@ -901,6 +942,15 @@ export class CombatesPage implements OnInit, OnDestroy {
   getPuntajeJugador(ronda: any, idJugador: any): number | string {
     const turno = ronda?.turnos?.find((t: any) => t.id_usuario == idJugador);
     return turno?.puntaje ?? '—';
+  }
+
+  getResultadoRonda(ronda: any): string {
+    const miId = this.usuario()?.id;
+    if (ronda.id_usuario_ganador == miId) return 'Victoria';
+    if (ronda.id_usuario_ganador) return 'Derrota';
+    // Sin ganador: verificar si fue empate real o abandono
+    const turnos = ronda.turnos ?? [];
+    return turnos.length < 2 ? 'Abandono' : 'Empate';
   }
 
   getFeedbackJugador(ronda: any, idJugador: any): string {
@@ -988,6 +1038,59 @@ export class CombatesPage implements OnInit, OnDestroy {
     this.porcentajeActividad.set(60);
     this.porcentajeSilencio.set(40);
     this.porcentajeClipping.set(0);
+  }
+
+  async abandonarCombate() {
+    const confirmar = confirm(
+      '¿Seguro que quieres abandonar este combate?\n\n' +
+      'Tu oponente ganará automáticamente y quedará registrado en el historial.'
+    );
+    if (!confirmar) return;
+
+    try {
+      const res = await this.combateService.abandonarCombate(
+        this.combateActivo().id,
+        this.usuario().id.toString()
+      );
+      if (res.ok) {
+        this.toastService.info('Abandonaste el combate. Tu oponente gana esta batalla.');
+        if (this.intervaloPolling) clearInterval(this.intervaloPolling);
+        await this.actualizarArena(); // Refresca para mostrar victoria_final
+      }
+    } catch (err) {
+      console.error(err);
+      this.toastService.error('No se pudo registrar el abandono. Intenta de nuevo.');
+    }
+  }
+
+  async reclamarVictoriaPorAbandono() {
+    const confirmar = confirm(
+      `Tu oponente lleva más de ${this.MINUTOS_TIMEOUT} minutos sin cantar.\n\n` +
+      '¿Quieres reclamar la victoria por abandono?'
+    );
+    if (!confirmar) return;
+
+    try {
+      // El "abandonador" es el oponente — determinamos su ID
+      const miId = this.usuario().id;
+      const combate = this.combateActivo();
+      const idOponente = combate.id_usuario_jugador1 == miId
+        ? combate.id_usuario_jugador2
+        : combate.id_usuario_jugador1;
+
+      const res = await this.combateService.abandonarCombate(
+        combate.id,
+        idOponente.toString()
+      );
+      if (res.ok) {
+        this.toastService.success('¡Victoria reclamada! Tu oponente abandonó el combate.');
+        if (this.intervaloPolling) clearInterval(this.intervaloPolling);
+        await this.actualizarArena();
+      }
+    } catch (err) {
+      console.error(err);
+      this.toastService.error('No se pudo reclamar la victoria. Intenta de nuevo.');
+    }
   }
 
   volverAlMenu() {
