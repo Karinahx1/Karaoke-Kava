@@ -199,18 +199,41 @@ export class AdminPage implements OnInit {
     this.urlAudio = cancion.url_audio ?? '';
   }
 
-  async eliminarCancion(id: number) {
-    const confirmar = confirm('¿Seguro que deseas eliminar esta canción? Esta acción no se puede deshacer.');
+  async toggleActiva(cancion: any) {
+    const nuevaActiva = !cancion.activa;
+    const accion = nuevaActiva ? 'activar' : 'desactivar';
+    const confirmar = confirm(
+      `¿Seguro que deseas ${accion} "${cancion.titulo}"?\n\n` +
+      (nuevaActiva
+        ? 'La canción volverá a aparecer en el catálogo para todos los usuarios.'
+        : 'La canción desaparecerá del catálogo pero su historial se conservará.')
+    );
     if (!confirmar) return;
 
     try {
-      await this.adminCancionService.eliminarCancion(id);
+      await this.adminCancionService.toggleActiva(cancion.id, nuevaActiva);
+      await this.cargarCanciones();
+    } catch (error: any) {
+      console.error('Error al cambiar estado de la canción:', error);
+      alert('Error al cambiar estado: ' + error.message);
+    }
+  }
+
+  async eliminarCancion(cancion: any) {
+    const confirmar = confirm(
+      `¿Seguro que deseas ELIMINAR permanentemente "${cancion.titulo}"?\n\n` +
+      'Esta acción no se puede deshacer.\n' +
+      'Solo funciona si la canción nunca fue usada en prácticas o combates.'
+    );
+    if (!confirmar) return;
+
+    try {
+      await this.adminCancionService.eliminarCancion(cancion.id);
       alert('Canción eliminada correctamente.');
       await this.cargarCanciones();
     } catch (error: any) {
       console.error('Error al eliminar canción:', error);
-      // El backend devuelve un mensaje claro cuando la canción está en uso
-      alert('⚠️ No se pudo eliminar la canción.\n\n' + error.message);
+      alert('⚠️ No se puede eliminar esta canción\n\n' + error.message + '\n\nPuedes usar el botón "Desactivar" para ocultarla del catálogo sin perder ningún historial.');
     }
   }
 

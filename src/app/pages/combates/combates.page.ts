@@ -73,8 +73,11 @@ export class CombatesPage implements OnInit, OnDestroy {
   usuario = signal<any>(null);
   cargando = signal(true);
 
-  // Vistas: 'lista' | 'buscando' | 'arena' | 'resultado_ronda' | 'victoria_final'
-  vistaActual = signal<'lista' | 'buscando' | 'arena' | 'resultado_ronda' | 'victoria_final'>('lista');
+  // Vistas
+  vistaActual = signal<'lista' | 'buscando' | 'arena' | 'mi_resultado_turno' | 'resultado_ronda' | 'victoria_final'>('lista');
+
+  // Resultado personal del turno que acabo de cantar
+  miResultadoTurno = signal<{ puntaje: number; feedback: string } | null>(null);
 
   misCombates = signal<any[]>([]);
   combateActivo = signal<any>(null);
@@ -84,8 +87,17 @@ export class CombatesPage implements OnInit, OnDestroy {
   rondaResultadoActiva = signal<any>(null); // La ronda de la que estamos mostrando resultados
   cuentaRegresiva = signal<number | null>(null);
 
-  // Señal separada para invitaciones pendientes (id_estado === 1 y soy jugador2)
+  // Invitaciones que YO RECIBÍ (soy jugador2, estado PENDIENTE)
   invitacionesPendientes = signal<any[]>([]);
+
+  // Invitaciones que YO ENVIÉ (soy jugador1, estado PENDIENTE)
+  invitacionesEnviadas = signal<any[]>([]);
+
+  // Indicador de invitaciones nuevas (para el badge visual)
+  hayInvitacionNueva = signal(false);
+
+  // Polling de la pantalla lista (para detectar invitaciones sin recargar)
+  intervaloPollingLista: any;
 
   // Polling para la pantalla "Buscando rival"
   intervaloPollingBusqueda: any;
@@ -113,6 +125,7 @@ export class CombatesPage implements OnInit, OnDestroy {
   ngOnDestroy() {
     if (this.intervaloPolling) clearInterval(this.intervaloPolling);
     if (this.intervaloPollingBusqueda) clearInterval(this.intervaloPollingBusqueda);
+    if (this.intervaloPollingLista) clearInterval(this.intervaloPollingLista);
     this.detenerReconocimiento();
     if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
       this.mediaRecorder.stop();
@@ -142,6 +155,7 @@ export class CombatesPage implements OnInit, OnDestroy {
       ).subscribe(query => this.ejecutarBusquedaUsuarios(query));
 
       await this.cargarMisCombates();
+      this.iniciarPollingLista();
     } catch (err) {
       console.error(err);
       this.toastService.error('Error al cargar el perfil. Intenta de nuevo.');
@@ -150,30 +164,52 @@ export class CombatesPage implements OnInit, OnDestroy {
     }
   }
 
+  // Polling silencioso cada 6s en la vista lista para detectar invitaciones nuevas
+  private iniciarPollingLista() {
+    if (this.intervaloPollingLista) clearInterval(this.intervaloPollingLista);
+    this.intervaloPollingLista = setInterval(async () => {
+      if (this.vistaActual() !== 'lista') return; // Solo activo en la lista
+      const prevCount = this.invitacionesPendientes().length;
+      await this.cargarMisCombates();
+      const newCount = this.invitacionesPendientes().length;
+      // Si llegaron invitaciones nuevas, activar badge y toast
+      if (newCount > prevCount) {
+        this.hayInvitacionNueva.set(true);
+        this.toastService.info(`🔔 ¡Tienes ${newCount - prevCount} nueva(s) invitación(es) de combate!`);
+      }
+    }, 6000);
+  }
+
   async cargarMisCombates() {
     if (!this.usuario()) return;
     try {
       const res = await this.combateService.obtenerMisCombates(this.usuario().id);
       if (res.ok) {
         const todos = res.data ?? [];
-        
-        // Separar invitaciones pendientes donde el usuario actual es el jugador2 invitado
-        const misInvitaciones = todos.filter(
-          (c: any) => c.id_estado === ESTADO_COMBATE.PENDIENTE && c.id_usuario_jugador2 == this.usuario().id
-        );
-        this.invitacionesPendientes.set(misInvitaciones);
+        const miId = this.usuario().id;
 
-        // El resto de combates va a misCombates
-        const mios = todos.filter(
-          (c: any) => !(c.id_estado === ESTADO_COMBATE.PENDIENTE && c.id_usuario_jugador2 == this.usuario().id)
+        // 1. Invitaciones que YO RECIBÍ (soy jugador2, esperando mi respuesta)
+        const recibidas = todos.filter(
+          (c: any) => c.id_estado === ESTADO_COMBATE.PENDIENTE && c.id_usuario_jugador2 == miId
         );
-        this.misCombates.set(mios);
+        this.invitacionesPendientes.set(recibidas);
+
+        // 2. Invitaciones que YO ENVIÉ (soy jugador1, esperando respuesta del otro)
+        const enviadas = todos.filter(
+          (c: any) => c.id_estado === ESTADO_COMBATE.PENDIENTE && c.id_usuario_jugador1 == miId
+        );
+        this.invitacionesEnviadas.set(enviadas);
+
+        // 3. El resto: combates en curso, finalizados, matchmaking
+        const resto = todos.filter(
+          (c: any) => c.id_estado !== ESTADO_COMBATE.PENDIENTE
+        );
+        this.misCombates.set(resto);
       } else {
         this.toastService.error('No se pudieron cargar tus combates.');
       }
     } catch (err) {
       console.error('Error cargando combates', err);
-      this.toastService.error('Error de conexión al cargar combates.');
     }
   }
 
@@ -199,8 +235,9 @@ export class CombatesPage implements OnInit, OnDestroy {
   async buscarOponenteAutomatico() {
     this.cargando.set(true);
     try {
-      // Si el usuario no tiene nivel, usar un nivel por defecto (ej. 1) para permitir pruebas
-      const nivel = this.usuario()?.id_nivel || 1;
+      // Si el usuario no tiene nivel asignado aún (null), se envía null para que
+      // el backend lo trate como nivel 1 (Principiante), igual que los demás sin nivel
+      const nivel = this.usuario()?.id_nivel ?? null;
       
       const res = await this.combateService.buscarOponente(this.usuario().id, nivel);
       if (res.ok) {
@@ -218,7 +255,10 @@ export class CombatesPage implements OnInit, OnDestroy {
           if (this.intervaloPollingBusqueda) clearInterval(this.intervaloPollingBusqueda);
           this.intervaloPollingBusqueda = setInterval(async () => {
             const detRes = await this.combateService.obtenerDetalleCombate(this.combateActivo().id);
-            if (detRes.ok && detRes.data?.id_estado === ESTADO_COMBATE.EN_CURSO) {
+            // Un rival se unió cuando jugador2 deja de ser null
+            // (ambos estados "esperando" y "en curso" usan el mismo id_estado,
+            // así que comparar el estado no sirve — hay que mirar si jugador2 ya existe)
+            if (detRes.ok && detRes.data?.id_usuario_jugador2 != null) {
               clearInterval(this.intervaloPollingBusqueda);
               this.toastService.success('¡Se encontró un rival! Entrando a la arena...');
               await this.entrarArena(detRes.data.id);
@@ -304,6 +344,10 @@ export class CombatesPage implements OnInit, OnDestroy {
     }
   }
 
+  verInvitaciones() {
+    this.hayInvitacionNueva.set(false); // Limpiar el badge al ver las invitaciones
+  }
+
   async aceptarInvitacion(idCombate: string) {
     this.cargando.set(true);
     try {
@@ -318,6 +362,25 @@ export class CombatesPage implements OnInit, OnDestroy {
     } catch (err) {
       console.error(err);
       this.toastService.error('Error al aceptar el combate.');
+    } finally {
+      this.cargando.set(false);
+    }
+  }
+
+  async cancelarInvitacion(idCombate: string) {
+    this.cargando.set(true);
+    try {
+      // Reutilizamos el mismo endpoint de rechazar — elimina el registro PENDIENTE
+      const res = await this.combateService.rechazarCombate(idCombate);
+      if (res.ok) {
+        this.toastService.info('Invitación cancelada.');
+        await this.cargarMisCombates();
+      } else {
+        this.toastService.error('No se pudo cancelar la invitación.');
+      }
+    } catch (err) {
+      console.error(err);
+      this.toastService.error('Error al cancelar la invitación.');
     } finally {
       this.cargando.set(false);
     }
@@ -351,6 +414,7 @@ export class CombatesPage implements OnInit, OnDestroy {
     this.videoUrl.set(null);
     this.turnoActual.set(null);
     this.grabando.set(false);
+    this.miResultadoTurno.set(null);
     
     try {
       const res = await this.combateService.obtenerDetalleCombate(idCombate);
@@ -396,21 +460,30 @@ export class CombatesPage implements OnInit, OnDestroy {
 
     const rondas = combate.rondas || [];
 
-    // Primero: mostrar resultados de rondas que el usuario aún no ha visto.
-    // Esto debe ocurrir ANTES de revisar si el combate terminó, porque el backend
-    // cierra el combate (id_estado=4) en el mismo instante en que termina la última
-    // ronda, y si revisáramos el estado del combate primero saltaríamos directo a
-    // victoria_final sin mostrar el resultado de esa ronda.
-    const rondasCompletadas = rondas.filter((r: any) => r.id_estado === 2);
-    for (const ronda of rondasCompletadas) {
-      if (!this.rondasVistas.has(ronda.id.toString())) {
-        this.rondaResultadoActiva.set(ronda);
+    // Rondas cerradas que aún no le mostramos al usuario
+    // CRÍTICO: usar ESTADO_RONDA.CERRADA (14), no el número 2 (código viejo)
+    const rondasCerradas = rondas.filter((r: any) => r.id_estado === ESTADO_RONDA.CERRADA);
+    const rondasPendientesDeVer = rondasCerradas.filter(
+      (r: any) => !this.rondasVistas.has(r.id.toString())
+    );
+
+    // Si estamos en 'mi_resultado_turno', solo avanzamos cuando la ronda cierra
+    if (this.vistaActual() === 'mi_resultado_turno') {
+      if (rondasPendientesDeVer.length > 0) {
+        this.rondaResultadoActiva.set(rondasPendientesDeVer[0]);
         this.vistaActual.set('resultado_ronda');
-        return;
       }
+      return; // No saltar a 'arena' mientras el usuario ve su resultado personal
     }
 
-    // Segundo: si todas las rondas ya se mostraron y el combate terminó → victoria final
+    // Mostrar resultado de ronda que aún no se vio (antes de chequear fin de combate)
+    if (rondasPendientesDeVer.length > 0) {
+      this.rondaResultadoActiva.set(rondasPendientesDeVer[0]);
+      this.vistaActual.set('resultado_ronda');
+      return;
+    }
+
+    // Si todas las rondas se mostraron y el combate terminó → victoria final
     if (combate.id_estado === ESTADO_COMBATE.FINALIZADO) {
       if (this.intervaloPolling) clearInterval(this.intervaloPolling);
       this.vistaActual.set('victoria_final');
@@ -460,13 +533,23 @@ export class CombatesPage implements OnInit, OnDestroy {
     if (rondaRes) {
       this.rondasVistas.add(rondaRes.id.toString());
     }
+
+    const rondasAntes = this.combateActivo()?.rondas?.length ?? 0;
+
     this.rondaResultadoActiva.set(null);
     this.rondaActiva.set(null);
-    this.videoUrl.set(null);  // Limpiar video para que la próxima ronda lo cargue fresco
+    this.videoUrl.set(null);
     this.turnoActual.set(null);
     this.oponenteYaCanto.set(false);
-    // Pedir datos frescos del servidor antes de evaluar
+    this.miResultadoTurno.set(null);
+
     await this.actualizarArena();
+
+    // Si después de actualizar aparece una ronda 3, notificar que hay desempate
+    const rondasDespues = this.combateActivo()?.rondas?.length ?? 0;
+    if (rondasDespues > rondasAntes && rondasDespues === 3) {
+      this.toastService.info('¡Empate! 🤝 El sistema eligió una canción sorpresa para la ronda de desempate 🎲');
+    }
   }
 
   convertirYoutubeAEmbed(url: string, autoplay = false): string | null {
@@ -796,9 +879,16 @@ export class CombatesPage implements OnInit, OnDestroy {
       );
 
       if (resTurno.ok) {
-        this.toastService.success(`¡Turno completado! Puntaje: ${resultado.puntaje}`);
+        // Guardar resultado personal y mostrar pantalla de feedback inmediato
+        this.miResultadoTurno.set({
+          puntaje: resultado.puntaje,
+          feedback: resultado.feedback
+        });
+        this.vistaActual.set('mi_resultado_turno');
       }
 
+      // Actualizar arena en background — si el oponente ya cantó, la ronda se cerrará
+      // y evaluarEstadoArena transitará a 'resultado_ronda' automáticamente
       await this.actualizarArena();
     } catch (e) {
       console.error('Error procesando turno arena:', e);
@@ -811,6 +901,24 @@ export class CombatesPage implements OnInit, OnDestroy {
   getPuntajeJugador(ronda: any, idJugador: any): number | string {
     const turno = ronda?.turnos?.find((t: any) => t.id_usuario == idJugador);
     return turno?.puntaje ?? '—';
+  }
+
+  getFeedbackJugador(ronda: any, idJugador: any): string {
+    const turno = ronda?.turnos?.find((t: any) => t.id_usuario == idJugador);
+    return turno?.feedback ?? '';
+  }
+
+  // Marcador acumulado de rondas cerradas (yo vs oponente)
+  getMarcador(): { yo: number; oponente: number } {
+    const rondas = this.combateActivo()?.rondas ?? [];
+    const miId = this.usuario()?.id;
+    let yo = 0, oponente = 0;
+    for (const r of rondas) {
+      if (r.id_estado !== ESTADO_RONDA.CERRADA) continue;
+      if (r.id_usuario_ganador == miId) yo++;
+      else if (r.id_usuario_ganador != null) oponente++;
+    }
+    return { yo, oponente };
   }
 
   private esMobile(): boolean {

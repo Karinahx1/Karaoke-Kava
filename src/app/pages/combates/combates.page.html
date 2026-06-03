@@ -77,23 +77,51 @@
           </div>
         </section>
 
-        <!-- Invitaciones pendientes (destacadas) -->
+        <!-- Invitaciones RECIBIDAS (destacadas con badge si son nuevas) -->
         @if (invitacionesPendientes().length > 0) {
-          <section class="invitaciones-section">
-            <h2>🔔 Invitaciones Pendientes</h2>
+          <section class="invitaciones-section" (click)="verInvitaciones()">
+            <h2>
+              🔔 Invitaciones recibidas
+              @if (hayInvitacionNueva()) {
+                <span class="badge-nuevo">¡Nueva!</span>
+              }
+            </h2>
             <div class="combates-list">
               @for (c of invitacionesPendientes(); track c.id) {
-                <div class="combate-item invitacion-destacada">
+                <div class="combate-item invitacion-destacada" [class.invitacion-nueva]="hayInvitacionNueva()">
                   <div class="combate-info">
                     <div class="combate-players">
                       <span class="p-name p1-color">{{ c.jugador1?.nombre || '...' }}</span>
                       <span class="mini-vs">te retó</span>
                     </div>
-                    <span class="combate-status badge-1">⏳ Te invitaron a combatir</span>
+                    <span class="combate-status">⏳ Esperando tu respuesta</span>
                   </div>
                   <div class="combate-actions">
                     <button class="btn-success" (click)="aceptarInvitacion(c.id)">✅ Aceptar</button>
                     <button class="btn-danger-small" (click)="rechazarInvitacion(c.id)">❌ Rechazar</button>
+                  </div>
+                </div>
+              }
+            </div>
+          </section>
+        }
+
+        <!-- Invitaciones ENVIADAS (con estado y opción de cancelar) -->
+        @if (invitacionesEnviadas().length > 0) {
+          <section class="invitaciones-section enviadas">
+            <h2>📤 Invitaciones enviadas</h2>
+            <div class="combates-list">
+              @for (c of invitacionesEnviadas(); track c.id) {
+                <div class="combate-item invitacion-enviada">
+                  <div class="combate-info">
+                    <div class="combate-players">
+                      <span class="mini-vs">Invitaste a</span>
+                      <span class="p-name p2-color">{{ c.jugador2?.nombre || '...' }}</span>
+                    </div>
+                    <span class="combate-status estado-esperando">⏳ Esperando respuesta...</span>
+                  </div>
+                  <div class="combate-actions">
+                    <button class="btn-cancelar-inv" (click)="cancelarInvitacion(c.id)">🚫 Cancelar</button>
                   </div>
                 </div>
               }
@@ -330,49 +358,87 @@
         </div>
     }
 
-    <!-- VISTA 4: Resultado de la Ronda -->
+    <!-- VISTA 4: Mi resultado personal (justo después de cantar) -->
+    @if (vistaActual() === 'mi_resultado_turno' && miResultadoTurno()) {
+      <div class="resultado-ronda-card slide-in">
+        <h2 class="title-gradient text-center">🎤 Tu resultado</h2>
+        <h3 class="text-center text-muted">{{ rondaActiva()?.cancion?.titulo ?? cancionSeleccionada()?.titulo }}</h3>
+
+        <div class="mi-puntaje-grande">
+          <span class="puntaje-numero">{{ miResultadoTurno()!.puntaje }}</span>
+          <span class="puntaje-label">puntos</span>
+        </div>
+
+        @if (miResultadoTurno()!.feedback) {
+          <div class="feedback-box">
+            <p class="feedback-texto">{{ miResultadoTurno()!.feedback }}</p>
+          </div>
+        }
+
+        <div class="esperando-oponente mt-4">
+          <div class="spinner"></div>
+          <p>Esperando a que tu oponente termine de cantar...</p>
+        </div>
+      </div>
+    }
+
+    <!-- VISTA 5: Resultado de la Ronda (ambos ya cantaron) -->
     @if (vistaActual() === 'resultado_ronda') {
       <div class="resultado-ronda-card slide-in">
-         <h2 class="title-gradient text-center">🏆 ¡Ronda {{ rondaResultadoActiva()?.numero_ronda }} Finalizada!</h2>
-         <h3 class="text-center text-muted">{{ rondaResultadoActiva()?.cancion?.titulo }}</h3>
-         
-         <div class="vs-resultado">
-            <!-- Jugador 1 -->
-            <div class="jugador-res" [class.winner-glow]="rondaResultadoActiva()?.id_usuario_ganador == combateActivo().jugador1.id">
-               <div class="fighter-avatar p1-bg">
-                 {{ combateActivo()?.jugador1?.nombre?.substring(0,1)?.toUpperCase() }}
-               </div>
-               <h4>{{ combateActivo()?.jugador1?.nombre }}</h4>
-               <div class="puntaje-box p1-color">
-                  {{ getPuntajeJugador(rondaResultadoActiva(), combateActivo().jugador1.id) }}
-               </div>
+        <h2 class="title-gradient text-center">Ronda {{ rondaResultadoActiva()?.numero_ronda }} — Resultados</h2>
+        <h3 class="text-center text-muted">{{ rondaResultadoActiva()?.cancion?.titulo }}</h3>
+
+        <!-- Marcador acumulado -->
+        <div class="marcador-global">
+          <span class="marcador-nombre p1-color">{{ combateActivo()?.jugador1?.nombre }}</span>
+          <span class="marcador-score">{{ getMarcador().yo }} — {{ getMarcador().oponente }}</span>
+          <span class="marcador-nombre p2-color">{{ combateActivo()?.jugador2?.nombre }}</span>
+        </div>
+
+        <div class="vs-resultado">
+          <!-- Jugador 1 -->
+          <div class="jugador-res" [class.winner-glow]="rondaResultadoActiva()?.id_usuario_ganador == combateActivo().jugador1.id">
+            <div class="fighter-avatar p1-bg">
+              {{ combateActivo()?.jugador1?.nombre?.substring(0,1)?.toUpperCase() }}
             </div>
-
-            <div class="vs-texto">VS</div>
-
-            <!-- Jugador 2 -->
-            <div class="jugador-res" [class.winner-glow]="rondaResultadoActiva()?.id_usuario_ganador == combateActivo().jugador2.id">
-               <div class="fighter-avatar p2-bg">
-                 {{ combateActivo()?.jugador2?.nombre?.substring(0,1)?.toUpperCase() }}
-               </div>
-               <h4>{{ combateActivo()?.jugador2?.nombre }}</h4>
-               <div class="puntaje-box p2-color">
-                  {{ getPuntajeJugador(rondaResultadoActiva(), combateActivo().jugador2.id) }}
-               </div>
+            <h4>{{ combateActivo()?.jugador1?.nombre }}</h4>
+            <div class="puntaje-box p1-color">
+              {{ getPuntajeJugador(rondaResultadoActiva(), combateActivo().jugador1.id) }} pts
             </div>
-         </div>
-
-         <div class="ganador-anuncio text-center mt-4">
-            @if (rondaResultadoActiva()?.id_usuario_ganador == usuario().id) {
-               <h2 class="text-success pulse-anim">¡GANASTE ESTA RONDA! 🎉</h2>
-            } @else if (rondaResultadoActiva()?.id_usuario_ganador) {
-               <h2 class="text-danger">Ganó tu oponente 😢</h2>
-            } @else {
-               <h2 class="text-warning">¡Empate! 🤝</h2>
+            @if (getFeedbackJugador(rondaResultadoActiva(), combateActivo().jugador1.id)) {
+              <p class="feedback-mini">{{ getFeedbackJugador(rondaResultadoActiva(), combateActivo().jugador1.id) }}</p>
             }
-         </div>
+          </div>
 
-         <button class="btn-primary mt-4" (click)="avanzarSiguienteRonda()">Continuar ➔</button>
+          <div class="vs-texto">VS</div>
+
+          <!-- Jugador 2 -->
+          <div class="jugador-res" [class.winner-glow]="rondaResultadoActiva()?.id_usuario_ganador == combateActivo().jugador2.id">
+            <div class="fighter-avatar p2-bg">
+              {{ combateActivo()?.jugador2?.nombre?.substring(0,1)?.toUpperCase() }}
+            </div>
+            <h4>{{ combateActivo()?.jugador2?.nombre }}</h4>
+            <div class="puntaje-box p2-color">
+              {{ getPuntajeJugador(rondaResultadoActiva(), combateActivo().jugador2.id) }} pts
+            </div>
+            @if (getFeedbackJugador(rondaResultadoActiva(), combateActivo().jugador2.id)) {
+              <p class="feedback-mini">{{ getFeedbackJugador(rondaResultadoActiva(), combateActivo().jugador2.id) }}</p>
+            }
+          </div>
+        </div>
+
+        <!-- Ganador de esta ronda -->
+        <div class="ganador-anuncio text-center mt-4">
+          @if (rondaResultadoActiva()?.id_usuario_ganador == usuario().id) {
+            <h2 class="text-success pulse-anim">¡Ganaste esta ronda! 🎉</h2>
+          } @else if (rondaResultadoActiva()?.id_usuario_ganador) {
+            <h2 class="text-danger">Tu oponente ganó esta ronda 😤</h2>
+          } @else {
+            <h2 class="text-warning">¡Ronda empatada! 🤝</h2>
+          }
+        </div>
+
+        <button class="btn-primary mt-4" (click)="avanzarSiguienteRonda()">Continuar ➔</button>
       </div>
     }
 

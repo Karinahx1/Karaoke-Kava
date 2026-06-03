@@ -45,6 +45,13 @@ export class AdminCancionService {
     return response.data;
   }
 
+  async toggleActiva(id: number, activa: boolean) {
+    const response: any = await firstValueFrom(
+      this.http.patch(`${this.apiUrl}/${id}/activa`, { activa })
+    );
+    return response.data;
+  }
+
   async eliminarCancion(id: number) {
     const response: any = await firstValueFrom(
       this.http.delete(`${this.apiUrl}/${id}`)

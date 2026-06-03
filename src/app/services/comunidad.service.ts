@@ -13,7 +13,11 @@ export interface UsuarioLeaderboard {
 export interface CombateFeed {
   id: string;
   fecha: string;
+  tipo: 'combate' | 'practica';
   mensaje: string;
+  jugador1Inicial: string;
+  jugador2Inicial: string;
+  puntaje?: number;
   estado: string;
 }
 
@@ -24,18 +28,26 @@ export interface CancionTop {
   vecesCantada: number;
 }
 
+export interface HistorialItem {
+  fecha: string;
+  puntaje: number;
+  cancionTitulo: string;
+}
+
 export interface PerfilEstadisticas {
   id: string;
   nombre: string;
   nivel: string;
+  cancionFavorita: string | null;
   estadisticas: {
     totalPracticas: number;
     puntajePromedio: number;
     mejorPuntaje: number;
     combatesJugados: number;
     combatesGanados: number;
+    winRate: number;
   };
-  historialReciente: any[];
+  historialReciente: HistorialItem[];
 }
 
 @Injectable({

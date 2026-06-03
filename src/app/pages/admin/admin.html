@@ -143,31 +143,48 @@
             <th>Artista(s)</th>
             <th>Género(s)</th>
             <th>Duración</th>
+            <th>Estado</th>
             <th>Acciones</th>
           </tr>
         </thead>
 
         <tbody>
-          <tr *ngFor="let cancion of canciones()">
+          <tr *ngFor="let cancion of canciones()" [class.fila-inactiva]="!cancion.activa">
             <td>{{ cancion.id }}</td>
             <td>{{ cancion.titulo }}</td>
             <td>{{ cancion.artistas?.join(', ') || 'Sin artista' }}</td>
             <td>{{ cancion.generos?.join(', ') || 'Sin género' }}</td>
             <td>{{ cancion.duracion }}s</td>
 
+            <td>
+              <span class="badge-estado" [class.badge-activa]="cancion.activa" [class.badge-inactiva]="!cancion.activa">
+                {{ cancion.activa ? '✅ Activa' : '🔴 Inactiva' }}
+              </span>
+            </td>
+
             <td class="acciones-tabla">
               <button class="btn-editar" type="button" (click)="editarCancion(cancion)">
                 Editar
               </button>
 
-              <button class="btn-eliminar" type="button" (click)="eliminarCancion(cancion.id)">
+              <button
+                class="btn-toggle"
+                type="button"
+                [class.btn-desactivar]="cancion.activa"
+                [class.btn-activar]="!cancion.activa"
+                (click)="toggleActiva(cancion)"
+              >
+                {{ cancion.activa ? 'Desactivar' : 'Activar' }}
+              </button>
+
+              <button class="btn-eliminar" type="button" (click)="eliminarCancion(cancion)">
                 Eliminar
               </button>
             </td>
           </tr>
 
           <tr *ngIf="canciones().length === 0">
-            <td colspan="6" class="vacio">
+            <td colspan="7" class="vacio">
               No hay canciones registradas.
             </td>
           </tr>

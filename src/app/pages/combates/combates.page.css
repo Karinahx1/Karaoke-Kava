@@ -708,6 +708,82 @@
   font-weight: bold;
 }
 
+/* === RESULTADO PERSONAL TURNO === */
+.mi-puntaje-grande {
+  text-align: center;
+  margin: 28px 0;
+}
+
+.puntaje-numero {
+  display: block;
+  font-size: 5rem;
+  font-weight: 900;
+  color: #facc15;
+  text-shadow: 0 0 30px rgba(250, 204, 21, 0.4);
+  line-height: 1;
+}
+
+.puntaje-label {
+  display: block;
+  font-size: 1rem;
+  color: #94a3b8;
+  margin-top: 4px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.feedback-box {
+  background: rgba(124, 58, 237, 0.1);
+  border: 1px solid rgba(124, 58, 237, 0.25);
+  border-radius: 14px;
+  padding: 16px 20px;
+  margin: 0 auto;
+  max-width: 520px;
+}
+
+.feedback-texto {
+  color: #e2e8f0;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin: 0;
+  text-align: center;
+}
+
+/* === MARCADOR GLOBAL === */
+.marcador-global {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 10px 20px;
+  margin: 12px 0 20px;
+}
+
+.marcador-score {
+  font-size: 1.8rem;
+  font-weight: 900;
+  color: white;
+}
+
+.marcador-nombre {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+/* === FEEDBACK MINI EN RESULTADO RONDA === */
+.feedback-mini {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  margin: 8px 0 0;
+  line-height: 1.4;
+  text-align: center;
+  max-width: 160px;
+}
+
 /* === VICTORIA FINAL ÉPICA === */
 .victoria-card {
   position: relative;
@@ -889,6 +965,65 @@
 
 .btn-danger-small:hover {
   background: rgba(239, 68, 68, 0.3);
+}
+
+/* === INVITACIONES ENVIADAS Y BADGE === */
+.invitaciones-section.enviadas h2 {
+  color: #94a3b8;
+  border-bottom-color: rgba(148, 163, 184, 0.15);
+}
+
+.invitacion-enviada {
+  background: rgba(148, 163, 184, 0.05);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.estado-esperando {
+  color: #94a3b8;
+  font-size: 0.82rem;
+}
+
+.btn-cancelar-inv {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #f87171;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.btn-cancelar-inv:hover { background: rgba(239, 68, 68, 0.25); }
+
+/* Badge "¡Nueva!" pulsante */
+.badge-nuevo {
+  display: inline-block;
+  background: #ef4444;
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 20px;
+  margin-left: 8px;
+  vertical-align: middle;
+  animation: pulse-badge 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-badge {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%       { transform: scale(1.1); opacity: 0.8; }
+}
+
+/* Borde animado cuando llega invitación nueva */
+.invitacion-nueva {
+  animation: borde-nuevo 1.5s ease-in-out 3;
+}
+
+@keyframes borde-nuevo {
+  0%, 100% { border-color: rgba(245, 158, 11, 0.3); }
+  50%       { border-color: rgba(245, 158, 11, 0.9); box-shadow: 0 0 12px rgba(245, 158, 11, 0.3); }
 }
 
 /* === PANTALLAS DE RESULTADO Y VICTORIA === */

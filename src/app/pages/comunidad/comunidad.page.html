@@ -34,23 +34,53 @@
       @if (activeTab() === 'leaderboard') {
         <section class="tab-section fade-in">
           <h2>Top 10 Cantantes</h2>
-          <div class="leaderboard-list">
-            @for (user of leaderboard(); track user.id; let i = $index) {
-              <div class="leaderboard-card" (click)="verPerfilPublico(user.id)">
-                <div class="rank" [class.top-3]="i < 3">#{{ i + 1 }}</div>
-                <div class="user-info">
-                  <h3>{{ user.nombre }}</h3>
-                  <span class="badge-nivel">{{ user.nivel }}</span>
-                </div>
-                <div class="score-info">
-                  <span class="score-label">Promedio</span>
-                  <span class="score-value">{{ user.puntajePromedio }} pts</span>
-                </div>
+
+          @if (leaderboard().length === 0) {
+            <p class="empty-state">Aún no hay suficientes prácticas para mostrar el ranking.</p>
+          } @else {
+
+            <!-- Podio: top 3 -->
+            <div class="podio">
+              @for (user of leaderboard(); track user.id; let i = $index) {
+                @if (i < 3) {
+                  <div class="podio-card podio-{{ i + 1 }}" (click)="verPerfilPublico(user.id)">
+                    <div class="medalla">{{ getMedalla(i + 1) }}</div>
+                    <div class="avatar-grande" [style.background]="getColorAvatar(user.nombre)">
+                      {{ getIniciales(user.nombre) }}
+                    </div>
+                    <h3 class="podio-nombre">{{ user.nombre }}</h3>
+                    <span class="badge-nivel">{{ user.nivel }}</span>
+                    <div class="podio-score">{{ user.puntajePromedio }} pts</div>
+                  </div>
+                }
+              }
+            </div>
+
+            <!-- Resto: posiciones 4-10 -->
+            @if (leaderboard().length > 3) {
+              <div class="leaderboard-list mt-24">
+                @for (user of leaderboard(); track user.id; let i = $index) {
+                  @if (i >= 3) {
+                    <div class="leaderboard-card" (click)="verPerfilPublico(user.id)">
+                      <div class="rank">#{{ i + 1 }}</div>
+                      <div class="avatar-small" [style.background]="getColorAvatar(user.nombre)">
+                        {{ getIniciales(user.nombre) }}
+                      </div>
+                      <div class="user-info">
+                        <h3>{{ user.nombre }}</h3>
+                        <span class="badge-nivel">{{ user.nivel }}</span>
+                      </div>
+                      <div class="score-info">
+                        <span class="score-label">Promedio</span>
+                        <span class="score-value">{{ user.puntajePromedio }} pts</span>
+                      </div>
+                    </div>
+                  }
+                }
               </div>
-            } @empty {
-              <p class="empty-state">Aún no hay suficientes prácticas para mostrar el ranking.</p>
             }
-          </div>
+
+          }
         </section>
       }
 
@@ -60,14 +90,37 @@
           <h2>Actividad Reciente</h2>
           <div class="feed-list">
             @for (item of feed(); track item.id) {
-              <div class="feed-card">
-                <div class="feed-icon">
-                  {{ item.estado === 'FINALIZADO' ? '🏆' : '⚔️' }}
+              <div class="feed-card" [class.feed-finalizado]="item.estado === 'FINALIZADO'" [class.feed-practica]="item.tipo === 'practica'">
+
+                <!-- Avatares -->
+                <div class="feed-avatares">
+                  <div class="avatar-small" [style.background]="getColorAvatar(item.jugador1Inicial)">
+                    {{ item.jugador1Inicial }}
+                  </div>
+                  @if (item.tipo === 'combate') {
+                    <div class="feed-vs">{{ item.estado === 'FINALIZADO' ? '🏆' : '⚔️' }}</div>
+                    <div class="avatar-small" [style.background]="getColorAvatar(item.jugador2Inicial)">
+                      {{ item.jugador2Inicial }}
+                    </div>
+                  } @else {
+                    <div class="feed-vs">🎤</div>
+                  }
                 </div>
+
                 <div class="feed-content">
                   <p class="feed-message">{{ item.mensaje }}</p>
-                  <span class="feed-date">{{ item.fecha | date:'short' }}</span>
+                  <div class="feed-meta">
+                    @if (item.tipo === 'combate') {
+                      <span class="feed-badge" [class.badge-finalizado]="item.estado === 'FINALIZADO'" [class.badge-en-curso]="item.estado === 'EN_CURSO'">
+                        {{ item.estado === 'FINALIZADO' ? 'Combate' : 'En curso' }}
+                      </span>
+                    } @else {
+                      <span class="feed-badge badge-practica">Práctica</span>
+                    }
+                    <span class="feed-date">{{ tiempoRelativo(item.fecha) }}</span>
+                  </div>
                 </div>
+
               </div>
             } @empty {
               <p class="empty-state">No hay actividad reciente de combates.</p>
@@ -83,13 +136,23 @@
           <div class="songs-list">
             @for (cancion of topCanciones(); track cancion.id; let i = $index) {
               <div class="song-card">
-                <div class="song-rank">#{{ i + 1 }}</div>
+                <div class="song-rank" [class.top-3]="i < 3">
+                  {{ i < 3 ? getMedalla(i + 1) : '#' + (i + 1) }}
+                </div>
                 <div class="song-details">
                   <h3>{{ cancion.titulo }}</h3>
                   <p>{{ cancion.artista }}</p>
+                  <!-- Barra de progreso relativa a la canción más cantada -->
+                  <div class="progreso-bar-bg">
+                    <div
+                      class="progreso-bar-fill"
+                      [style.width.%]="(cancion.vecesCantada / topCanciones()[0].vecesCantada) * 100"
+                    ></div>
+                  </div>
                 </div>
                 <div class="song-stats">
-                  <span class="icon">🎤</span> {{ cancion.vecesCantada }} reproducciones
+                  <span class="song-count">{{ cancion.vecesCantada }}</span>
+                  <span class="song-count-label">veces cantada</span>
                 </div>
               </div>
             } @empty {
@@ -103,29 +166,7 @@
       @if (activeTab() === 'mi-perfil') {
         <section class="tab-section fade-in">
           @if (miPerfil()) {
-            <div class="profile-header">
-              <h2>{{ miPerfil()!.nombre }}</h2>
-              <span class="badge-nivel large">{{ miPerfil()!.nivel }}</span>
-            </div>
-            
-            <div class="stats-grid">
-              <div class="stat-card">
-                <span class="stat-value">{{ miPerfil()!.estadisticas.puntajePromedio }}</span>
-                <span class="stat-label">Puntaje Promedio</span>
-              </div>
-              <div class="stat-card">
-                <span class="stat-value">{{ miPerfil()!.estadisticas.mejorPuntaje }}</span>
-                <span class="stat-label">Mejor Puntaje</span>
-              </div>
-              <div class="stat-card">
-                <span class="stat-value">{{ miPerfil()!.estadisticas.totalPracticas }}</span>
-                <span class="stat-label">Prácticas Realizadas</span>
-              </div>
-              <div class="stat-card">
-                <span class="stat-value">{{ miPerfil()!.estadisticas.combatesGanados }}/{{ miPerfil()!.estadisticas.combatesJugados }}</span>
-                <span class="stat-label">Combates Ganados</span>
-              </div>
-            </div>
+            <ng-container *ngTemplateOutlet="perfilTemplate; context: { perfil: miPerfil() }"></ng-container>
           } @else {
             <p class="empty-state">No pudimos cargar tu perfil.</p>
           }
@@ -136,33 +177,89 @@
       @if (activeTab() === 'perfil-publico' && perfilPublico()) {
         <section class="tab-section fade-in">
           <button class="btn-text-back" (click)="setTab('leaderboard')">← Volver al Ranking</button>
-          
           <div class="profile-header public">
+            <div class="avatar-grande" [style.background]="getColorAvatar(perfilPublico()!.nombre)">
+              {{ getIniciales(perfilPublico()!.nombre) }}
+            </div>
             <h2>{{ perfilPublico()!.nombre }}</h2>
             <span class="badge-nivel large">{{ perfilPublico()!.nivel }}</span>
-            
-            <button class="btn-challenge" (click)="desafiarUsuario(perfilPublico()!.id)">
-              ⚔️ Desafiar
+            <button class="btn-challenge" (click)="desafiarUsuario(perfilPublico()!.id)" [disabled]="enviandoDesafio()">
+              {{ enviandoDesafio() ? '⏳ Enviando...' : '⚔️ Desafiar' }}
             </button>
           </div>
-          
-          <div class="stats-grid">
-            <div class="stat-card">
-              <span class="stat-value">{{ perfilPublico()!.estadisticas.puntajePromedio }}</span>
-              <span class="stat-label">Puntaje Promedio</span>
-            </div>
-            <div class="stat-card">
-              <span class="stat-value">{{ perfilPublico()!.estadisticas.totalPracticas }}</span>
-              <span class="stat-label">Prácticas Realizadas</span>
-            </div>
-            <div class="stat-card">
-              <span class="stat-value">{{ perfilPublico()!.estadisticas.combatesGanados }}</span>
-              <span class="stat-label">Victorias</span>
-            </div>
-          </div>
+          <ng-container *ngTemplateOutlet="perfilTemplate; context: { perfil: perfilPublico() }"></ng-container>
         </section>
       }
 
     }
   </main>
+
+  <!-- Template reutilizable para el cuerpo del perfil (mi perfil + perfil público) -->
+  <ng-template #perfilTemplate let-perfil="perfil">
+
+    <!-- Avatar + nombre (solo en mi-perfil, el público ya lo tiene arriba) -->
+    @if (activeTab() === 'mi-perfil') {
+      <div class="profile-header">
+        <div class="avatar-grande" [style.background]="getColorAvatar(perfil.nombre)">
+          {{ getIniciales(perfil.nombre) }}
+        </div>
+        <h2>{{ perfil.nombre }}</h2>
+        <span class="badge-nivel large">{{ perfil.nivel }}</span>
+      </div>
+    }
+
+    <!-- Stats principales -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <span class="stat-value">{{ perfil.estadisticas.puntajePromedio }}</span>
+        <span class="stat-label">Puntaje Promedio</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value">{{ perfil.estadisticas.mejorPuntaje }}</span>
+        <span class="stat-label">Mejor Puntaje</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value">{{ perfil.estadisticas.totalPracticas }}</span>
+        <span class="stat-label">Prácticas</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value stat-winrate">{{ perfil.estadisticas.winRate ?? 0 }}%</span>
+        <span class="stat-label">Win Rate</span>
+        <span class="stat-sub">{{ perfil.estadisticas.combatesGanados }}/{{ perfil.estadisticas.combatesJugados }} combates</span>
+      </div>
+    </div>
+
+    <!-- Canción favorita -->
+    @if (perfil.cancionFavorita) {
+      <div class="cancion-favorita">
+        <span class="cf-icon">🎵</span>
+        <div>
+          <span class="cf-label">Canción favorita</span>
+          <span class="cf-titulo">{{ perfil.cancionFavorita }}</span>
+        </div>
+      </div>
+    }
+
+    <!-- Historial reciente -->
+    @if (perfil.historialReciente?.length > 0) {
+      <div class="historial-section">
+        <h3>Últimas prácticas</h3>
+        <div class="historial-list">
+          @for (item of perfil.historialReciente; track item.fecha) {
+            <div class="historial-item">
+              <div class="historial-info">
+                <span class="historial-cancion">{{ item.cancionTitulo }}</span>
+                <span class="historial-fecha">{{ tiempoRelativo(item.fecha) }}</span>
+              </div>
+              <div class="historial-puntaje" [class.puntaje-alto]="item.puntaje >= 70" [class.puntaje-medio]="item.puntaje >= 40 && item.puntaje < 70" [class.puntaje-bajo]="item.puntaje < 40">
+                {{ item.puntaje }} pts
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    }
+
+  </ng-template>
+
 </div>
